@@ -9,6 +9,13 @@
 7. プログラムを変更後、もう一度実行したいときは run と入力し、return を押す
 */
 
+/**
+ * 追加した機能一覧
+ * - ソフトドロップ(`DOWN` キーで操作中のミノを 1 マス落とす)
+ * - 7ミノ一巡(ネクストに 7 種類ミノが出現したら次の 7 種類を出現させる)
+ * - ネクスト表示(次に来るミノを画面上に表示)
+ */
+
 package tetris
 
 import scala.util.Random
@@ -94,7 +101,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
   
   //////
 
-  // 1, 4, 7. tick
+  // tick
   // 目的：時間の経過に応じて世界を更新する関数(操作中のテトリミノを 1 マスだけ下に落下させる)
   def tick(): World = {
     if (piece._2 == List(List(Transparent))) this
@@ -112,9 +119,8 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
     }
   }
 
-  // 2, 5, 8. keyEvent
+  // keyEvent
   // 目的：キー入力に従って世界を更新する
-  // 8. ソフトドロップの追加
   def keyEvent(key: String): World = {
     if (piece._2 == List(List(Transparent))) this
     else {
@@ -131,7 +137,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
     }
   }
   
-  // 3. collision
+  // collision
   // 目的：受け取った世界で衝突が起きているかを判定する
   def collision(world: TetrisWorld): Boolean = {
     val (pileH, pileW) = S.size(world.pile)
@@ -153,7 +159,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
     )
   }
 
-  // 6. eraseRows
+  // eraseRows
   // 目的：pile から揃った行を削除して、それより上のブロックは行単位で落とした Shape を返す
   def eraseRows(pile: S.Shape): S.Shape = {
     val erase_pile = pile.filter(_.filter(_ != Transparent).length != pile(0).length)
@@ -173,7 +179,7 @@ object A extends App {
   // 新しいテトロミノの作成
   val r = new Random()
 
-  // 課題 8: 7 種類のミノを 1 セット(順番はランダム) としてセット毎に出現するようにする
+  // 7 種類のミノを 1 セット(順番はランダム) としてセット毎に出現するようにする
   var nextPieceList: List[S.Shape] = Random.shuffle(S.allShapes)
   def newPiece(): ((Int, Int), S.Shape) = {
     val pos = (WellWidth / 2 - 1, 0)
