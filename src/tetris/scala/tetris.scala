@@ -19,7 +19,7 @@ import sdraw.{World, Color, Transparent, HSB}
 import tetris.{ShapeLib => S}
 
 // テトリスを動かすための関数
-case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends World() {
+case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, score: Int) extends World() {
 
   // マウスクリックは無視
   def click(p: sgeometry.Pos): World = this
@@ -56,7 +56,19 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
     val (pos, shape) = piece
     canvas.drawRect(Pos(0, 0), canvas.width, canvas.height, CanvasColor) &&
     drawShape00(pile) &&
-    drawShape(pos, shape)
+    drawShape(pos, shape) &&
+    canvas.drawString(Pos(0, canvas.height), s"${score}")
+  }
+
+  //スコア設定
+  def score_setting(lines:Int): Int = {
+    lines match{
+      case 0 => 0
+      case 1 => 40
+      case 2 => 100
+      case 3 => 300
+      case 4 => 1200
+    }
   }
 
   // 1, 4, 7. tick
@@ -79,12 +91,12 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
   //目的:下に移動できなくなったときに適切な処理を行う
   def tick(): World = {
     val ((x,y),shape) = piece
-    if(S.overlap(pile,S.shiftSE(shape,x,y))) TetrisWorld(piece,pile)//ゲームオーバー
-    else if(collision(TetrisWorld(((x,y+1),shape),pile))) {
-      val newpile = eraseRows(S.combine(pile,S.shiftSE(shape,x,y)))
-      TetrisWorld(A.newPiece(),newpile)
+    if(S.overlap(pile,S.shiftSE(shape,x,y))) TetrisWorld(piece,pile,score)//ゲームオーバー
+    else if(collision(TetrisWorld(((x,y+1),shape),pile,score))) {
+      val (newpile,del_lines) = eraseRows(S.combine(pile,S.shiftSE(shape,x,y)))
+      TetrisWorld(A.newPiece(), newpile, score + score_setting(del_lines))
     }
-    else TetrisWorld(((x,y+1),shape),pile)         
+    else TetrisWorld(((x,y+1),shape), pile, score)         
   }
 
   // 2, 5. keyEvent
@@ -105,25 +117,29 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
     val ((x,y),shape) = piece
     key match{
       case ("RIGHT") => {
-        if(collision(TetrisWorld(((x+1,y),shape),pile))) TetrisWorld(piece,pile)
-        else TetrisWorld(((x+1,y),shape),pile)
+        if(collision(TetrisWorld(((x+1,y),shape),pile,score))) TetrisWorld(piece,pile,score)
+        else TetrisWorld(((x+1,y),shape),pile,score)
       }
       case ("LEFT") => {
-        if(collision(TetrisWorld(((x-1,y),shape),pile))) TetrisWorld(piece,pile)
-        else TetrisWorld(((x-1,y),shape),pile)
+        if(collision(TetrisWorld(((x-1,y),shape),pile,score))) TetrisWorld(piece,pile,score)
+        else TetrisWorld(((x-1,y),shape),pile,score)
       }
       case ("UP") => {
-        if(collision(TetrisWorld(((x,y),S.rotate(shape)),pile))) TetrisWorld(piece,pile)
-        else TetrisWorld(((x,y),S.rotate(shape)),pile)
+        if(collision(TetrisWorld(((x,y),S.rotate(shape)),pile,score))) TetrisWorld(piece,pile,score)
+        else TetrisWorld(((x,y),S.rotate(shape)),pile,score)
       }
-      case _ => TetrisWorld(piece,pile)
+      case ("DOWN") => {
+        if(collision(TetrisWorld(((x,y+1),shape),pile,score))) TetrisWorld(piece,pile,score)
+        else TetrisWorld(((x,y+1),shape),pile,score)        
+      }
+      case _ => TetrisWorld(piece,pile,score)
     }
   }
 
   // 3. collision
   // 目的：受け取った世界で衝突があれば真を返す。真とするのは左、右、下のどれかの壁を突き抜けているときとpileと重なり合うとき
   def collision(world: TetrisWorld): Boolean = {
-    val TetrisWorld(piece1,pile1) = world 
+    val TetrisWorld(piece1,pile1,score1) = world 
     val ((x,y),shape) = piece1
     val (a,b) = S.size(shape)
     x < 0 || x + b > 10 || y + a > 10 || S.overlap(S.shiftSE(shape,x,y),pile1)
@@ -131,13 +147,14 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
 
   // 6. eraseRows
   // 目的：
-  def eraseRows(pile: S.Shape): S.Shape = {
+  def eraseRows(pile: S.Shape): (S.Shape,Int) = {
     def fullRow(row: S.Row): Boolean = {
       if(row.filter(_==Transparent).length == 0) true
       else false
     }
     val delete_pile = pile.foldRight(Nil: S.Shape)((r,rs) => if(fullRow(r))rs;else r :: rs)
-    S.empty(10-delete_pile.length,10) ++ delete_pile
+    val del_lines = pile.length - delete_pile.length
+    (S.empty(10-delete_pile.length,10) ++ delete_pile, del_lines)
   }
 }
 
@@ -161,8 +178,8 @@ object A extends App {
   val piece = newPiece()
 
   // ゲームの初期値
-  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)))
+  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)),0)
 
   // ゲームの開始
-  world.bigBang(BlockSize * WellWidth, BlockSize * WellHeight, 0.4)
+  world.bigBang(BlockSize * WellWidth, BlockSize * WellHeight, 1)
 }
