@@ -81,6 +81,8 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
     drawShape00(S.combine(pile, S.shiftSE(infoBlock, 10, 0))) &&
     drawShape(pos, shape)
     drawShape((10 + 2,0 + 1), hold)
+    drawShape((10 + 2, 8), next)
+    drawShape((10 + 2, 14), nextNext)
     if(!stop) drawShape((10 + 1, 6), List(List.fill(6)(White)))
     else drawShape((10 + 1, 6), List(List.fill(6)(Red)))
   }
@@ -145,7 +147,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
       }
       case "r" => {//ゲームのリセット
         println("Game Reset")
-        TetrisWorld(newPiece(), List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), S.random(), stop, next, nextNext) 
+        TetrisWorld(newPiece(), List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), S.random(), stop, S.random(), S.random()) 
       }
       case "s" => {//ゲームの一時停止と再開
         newStop = !stop
