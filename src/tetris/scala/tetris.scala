@@ -25,12 +25,14 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
   def click(p: sgeometry.Pos): World = this
 
   // ブロックの描画
-  def drawRect(x: Int, y: Int, w: Int, h: Int, c: Color): Boolean = {
-    canvas.drawRect(Pos(A.BlockSize * x, A.BlockSize * y), A.BlockSize * w, A.BlockSize * h, c)
+  // 座標は、x,yはそのまま、dx,dyはdivideを考慮する
+  def drawRect(x: Int, dx: Int, y: Int, dy: Int, w: Int, h: Int, c: Color, divide: Int): Boolean = {
+    canvas.drawRect(Pos(A.BlockSize * x + A.BlockSize/divide * dx, A.BlockSize * y + A.BlockSize/divide * dy), A.BlockSize/divide * w, A.BlockSize/divide * h, c)
   }
 
   // shape の描画（与えられた位置）
-  def drawShape(pos: (Int, Int), shape: S.Shape): Boolean = {
+  // 1/divideの大きさにする
+  def drawShape(pos: (Int, Int), shape: S.Shape, divide: Int): Boolean = {
     val pos_colors = shape.zipWithIndex.flatMap(row_i => {
       val (row, i) = row_i
       row.zipWithIndex.map(box_j => {
@@ -42,12 +44,16 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
     val (x, y) = pos
     pos_colors.forall(pos_color => {
       val (dx, dy, color) = pos_color
-      drawRect(x + dx, y + dy, 1, 1, color)
+      drawRect(x, dx, y, dy, 1, 1, color, divide)
     })
   }
 
   // shape の描画（原点）
-  def drawShape00(shape: S.Shape): Boolean = drawShape((0, 0), shape)
+  def drawShape00(shape: S.Shape): Boolean = drawShape((0, 0), shape, 1)
+
+  //　ステージとメニューをわける壁の描画
+  //　ステージの右端外に大きさ1/2,幅1,高さ40の白い壁
+  def drawWall(): Boolean = drawRect(A.WellWidth, 0, 0, 0, 1, 40, HSB(0, 0, 1), 2)
 
   // ゲーム画面の描画
   val CanvasColor = HSB(0, 0, 0.1f)
@@ -56,7 +62,8 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
     val (pos, shape) = piece
     canvas.drawRect(Pos(0, 0), canvas.width, canvas.height, CanvasColor) &&
     drawShape00(pile) &&
-    drawShape(pos, shape)
+    drawShape(pos, shape, 1) &&
+    drawWall()
   }
 
   // 1, 4, 7. tick
@@ -86,6 +93,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
       case "RIGHT" => TetrisWorld(((x+1, y), s), pile)
       case "LEFT" => TetrisWorld(((x-1, y), s), pile)
       case "UP" => TetrisWorld(((x, y), S.rotate(s)), pile)
+      case "DOWN" => TetrisWorld(((x, y+1), s), pile)
       case _ => TetrisWorld(piece, pile)
     })
     if(collision(newWorld)) TetrisWorld(piece, pile)
@@ -121,7 +129,8 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
 object A extends App {
   // ゲームウィンドウとブロックのサイズ
   val WellWidth = 10
-  val WellHeight = 10
+  val WellHeight = 20
+  val SideWidth = 5
   val BlockSize = 30
 
   // 新しいテトロミノの作成
@@ -140,5 +149,5 @@ object A extends App {
   val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)))
 
   // ゲームの開始
-  world.bigBang(BlockSize * WellWidth, BlockSize * WellHeight, 1)
+  world.bigBang(BlockSize * (WellWidth + SideWidth), BlockSize * WellHeight, 1)
 }
