@@ -20,7 +20,7 @@ import sdraw._
 import tetris.{ShapeLib => S}
 
 // テトリスを動かすための関数
-case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shape) extends World() {
+case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shape, stop: Boolean, next: S.Shape, nextNext: S.Shape) extends World() {
   // ゲームウィンドウとブロックのサイズ
   val WellWidth = 10
   val WellHeight = 20
@@ -81,6 +81,8 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
     drawShape00(S.combine(pile, S.shiftSE(infoBlock, 10, 0))) &&
     drawShape(pos, shape)
     drawShape((10 + 2,0 + 1), hold)
+    if(!stop) drawShape((10 + 1, 6), List(List.fill(6)(White)))
+    else drawShape((10 + 1, 6), List(List.fill(6)(Red)))
   }
 
   // 1, 4, 7. tick
@@ -99,20 +101,20 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
   }
 */
   def tick(): World = {
-    if(piece._2 == List(List(Transparent))) return this
+    if(piece._2 == List(List(Transparent)) || stop) return this
     val cur_x = piece._1._1
     val cur_y = piece._1._2
-    if(collision(TetrisWorld(((cur_x, cur_y + 1), piece._2) , pile, hold))) {
+    if(collision(TetrisWorld(((cur_x, cur_y + 1), piece._2) , pile, hold, stop, next, nextNext))) {
       val cpiece = S.shiftSE(piece._2, cur_x, cur_y)
       val nextPile = eraseRows(S.combine(pile, cpiece))
-      val nextWorld = TetrisWorld(newPiece(), nextPile, hold)
+      val nextWorld = TetrisWorld(((WellWidth / 2 - 1, 0), next), nextPile, hold, stop, nextNext, S.random())
       if(collision(nextWorld)){
         println("Game Over")
-        return TetrisWorld(((0, 0), List(List(Transparent))), nextPile, hold)
+        return TetrisWorld(((0, 0), List(List(Transparent))), nextPile, hold, stop, next, nextNext)
       }
       else return nextWorld
     }
-    TetrisWorld(((cur_x, cur_y + 1), piece._2) , pile, hold)
+    TetrisWorld(((cur_x, cur_y + 1), piece._2) , pile, hold, stop, next, nextNext)
   }
 
   // 2, 5. keyEvent
@@ -129,25 +131,33 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
   }
 */
   def keyEvent(key: String): World = {
+    var newStop = stop
     val cur_x = piece._1._1
     val cur_y = piece._1._2
     val nextWorld = key match {
-      case "RIGHT" | "l" => TetrisWorld(((cur_x + 1, cur_y),piece._2) , pile, hold)
-      case "LEFT" | "j" => TetrisWorld(((cur_x - 1, cur_y), piece._2) , pile, hold)
-      case "UP" => TetrisWorld(((cur_x, cur_y), S.rotate(piece._2)) , pile, hold)
-      case "DOWN" => TetrisWorld(((cur_x, cur_y + 1), piece._2) , pile, hold)
+      case "RIGHT" | "l" => TetrisWorld(((cur_x + 1, cur_y),piece._2) , pile, hold, stop, next, nextNext)
+      case "LEFT" | "j" => TetrisWorld(((cur_x - 1, cur_y), piece._2) , pile, hold, stop, next, nextNext)
+      case "UP" => TetrisWorld(((cur_x, cur_y), S.rotate(piece._2)) , pile, hold, stop, next, nextNext)
+      case "DOWN" => TetrisWorld(((cur_x, cur_y + 1), piece._2) , pile, hold, stop, next, nextNext)
       case "d" => {//holdの実装
         val (nextPiece, nextHold) = (hold, piece._2)
-        TetrisWorld(((cur_x, cur_y),nextPiece) , pile, nextHold)
+        TetrisWorld(((cur_x, cur_y),nextPiece) , pile, nextHold, stop, next, nextNext)
       }
-      case "r" => {//ゲームの再開
+      case "r" => {//ゲームのリセット
         println("Game Reset")
-        TetrisWorld(newPiece(), List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), S.random()) 
+        TetrisWorld(newPiece(), List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), S.random(), stop, next, nextNext) 
       }
-      case _ => TetrisWorld(piece, pile, hold)
+      case "s" => {//ゲームの一時停止と再開
+        newStop = !stop
+        TetrisWorld(piece, pile, hold, newStop, next, nextNext)
+      }
+      case _ => TetrisWorld(piece, pile, hold, stop, next, nextNext)
     }
     if(collision(nextWorld)) {
       return this
+    }
+    else if(newStop){
+      return TetrisWorld(piece, pile, hold, newStop, next, nextNext)
     }
 
     nextWorld
@@ -199,7 +209,7 @@ object A extends App {
   val piece = newPiece()
 
   // ゲームの初期値
-  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), S.random())
+  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), S.random(), false, S.random(), S.random())
 
   // ゲームの開始
   world.bigBang(BlockSize * (WellWidth + 7), BlockSize * WellHeight, 1)
