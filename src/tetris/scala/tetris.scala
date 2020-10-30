@@ -15,6 +15,7 @@ import scala.util.Random
 
 import sgeometry.Pos
 import sdraw.{World, Color, Transparent, HSB}
+import sdraw._
 
 import tetris.{ShapeLib => S}
 
@@ -34,7 +35,14 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
   }
 
   //holdとか次のテトロミノの情報を出すブロック
-  val infoBlock: S.Shape = List.fill(WellHeight)(List.fill(WellWidth)(Transparent))
+  def insertWhite(row: S.Row): S.Row = {
+    row match {
+      case x::xs => White::xs
+      case _ => Nil
+    }
+  }
+
+  val infoBlock: S.Shape = List.fill(WellHeight)(List.fill(7)(Transparent)).map(insertWhite(_))
 
   // マウスクリックは無視
   def click(p: sgeometry.Pos): World = this
@@ -70,8 +78,9 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
   def draw(): Boolean = {
     val (pos, shape) = piece
     canvas.drawRect(Pos(0, 0), canvas.width, canvas.height, CanvasColor) &&
-    drawShape00(pile) &&
+    drawShape00(S.combine(pile, S.shiftSE(infoBlock, 10, 0))) &&
     drawShape(pos, shape)
+    drawShape((10 + 2,0 + 1), hold)
   }
 
   // 1, 4, 7. tick
@@ -132,7 +141,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
         TetrisWorld(((cur_x, cur_y),nextPiece) , pile, nextHold)
       }
       case "r" => {//ゲームの再開
-        println("Game reset")
+        println("Game Reset")
         TetrisWorld(newPiece(), List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), S.random()) 
       }
       case _ => TetrisWorld(piece, pile, hold)
@@ -193,5 +202,5 @@ object A extends App {
   val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), S.random())
 
   // ゲームの開始
-  world.bigBang(BlockSize * WellWidth, BlockSize * WellHeight, 1)
+  world.bigBang(BlockSize * (WellWidth + 7), BlockSize * WellHeight, 1)
 }
