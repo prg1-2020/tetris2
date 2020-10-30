@@ -19,7 +19,7 @@ import sdraw.{World, Color, Transparent, HSB}
 import tetris.{ShapeLib => S}
 
 // テトリスを動かすための関数
-case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends World() {
+case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[S.Shape]) extends World() {
 
   // マウスクリックは無視
   def click(p: sgeometry.Pos): World = this
@@ -51,9 +51,23 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
   // shape の描画（原点）
   def drawShape00(shape: S.Shape): Boolean = drawShape((0, 0), shape, 1)
 
-  //　ステージとメニューをわける壁の描画
-  //　ステージの右端外に大きさ1/2,幅1,高さ40の白い壁
+  // ステージとメニューをわける壁の描画
+  // ステージの右端外に大きさ1/2,幅1,高さ40の白い壁
   def drawWall(): Boolean = drawRect(A.WellWidth, 0, 0, 0, 1, 40, HSB(0, 0, 1), 2)
+
+  // 予告の描画
+  // x=11マス,大きさ1/3,上から高さ2マスずつ最大2*7=14マス弱まで使う
+  def drawNexts(nexts: List[S.Shape]): Boolean = {
+    // indexを保持して頭から描画する
+    def drawNextSub(nexts: List[S.Shape], index: Int): Boolean = {
+      nexts match {
+        case Nil => true
+        case s :: ss => drawShape((11, index * 2),s,3) &&
+          drawNextSub(ss, index+1)
+      }
+    }
+    drawNextSub(nexts, 0)
+  }
 
   // ゲーム画面の描画
   val CanvasColor = HSB(0, 0, 0.1f)
@@ -63,24 +77,25 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
     canvas.drawRect(Pos(0, 0), canvas.width, canvas.height, CanvasColor) &&
     drawShape00(pile) &&
     drawShape(pos, shape, 1) &&
-    drawWall()
+    drawWall() &&
+    drawNexts(nexts)
   }
 
   // 1, 4, 7. tick
   // 目的：時間の経過に応じて世界を更新する
   def tick(): World = {
     val ((x, y), s) = piece
-    val newWorld = TetrisWorld(((x, y+1), s), pile)
+    val newWorld = TetrisWorld(((x, y+1), s), pile, nexts)
     if(collision(newWorld)){
       //落下してぶつかったら
       val newPile = eraseRows(S.combine(S.shiftSE(s, x, y), pile)) //堆積
-      val newPiece = A.newPiece()
-      if(collision(TetrisWorld(newPiece, newPile))){
+      val (newPiece, newNexts) = A.popNewPiece(nexts)
+      if(collision(TetrisWorld(newPiece, newPile, newNexts))){
         //新しいpieceがぶつかっていたら
         println("Game Over")
-        TetrisWorld(piece, pile)
+        TetrisWorld(piece, pile, nexts)
       }else
-        TetrisWorld(newPiece, newPile)
+        TetrisWorld(newPiece, newPile, newNexts)
     }else
       newWorld
   }
@@ -90,13 +105,13 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
   def keyEvent(key: String): World = {
     val ((x, y), s) = piece
     val newWorld = (key match {
-      case "RIGHT" => TetrisWorld(((x+1, y), s), pile)
-      case "LEFT" => TetrisWorld(((x-1, y), s), pile)
-      case "UP" => TetrisWorld(((x, y), S.rotate(s)), pile)
-      case "DOWN" => TetrisWorld(((x, y+1), s), pile)
-      case _ => TetrisWorld(piece, pile)
+      case "RIGHT" => TetrisWorld(((x+1, y), s), pile, nexts)
+      case "LEFT" => TetrisWorld(((x-1, y), s), pile, nexts)
+      case "UP" => TetrisWorld(((x, y), S.rotate(s)), pile, nexts)
+      case "DOWN" => TetrisWorld(((x, y+1), s), pile, nexts)
+      case _ => TetrisWorld(piece, pile, nexts)
     })
-    if(collision(newWorld)) TetrisWorld(piece, pile)
+    if(collision(newWorld)) TetrisWorld(piece, pile, nexts)
     else newWorld
   }
 
@@ -142,11 +157,31 @@ object A extends App {
      List.fill(r.nextInt(4))(0).foldLeft(S.random())((shape, _) => shape))
   }
 
+  // 7ミノをシャッフルして返す
+  def newPieceList(): List[S.Shape] = {
+    r.shuffle(S.allShapes)
+  }
+
+  // 次のミノを取り出し、(piece, nexts)を返す
+  // nextsが空になったら補充する
+  def popNewPiece(nexts: List[S.Shape]): (((Int, Int), S.Shape), List[S.Shape]) = {
+    try {
+      val newShape = nexts.head
+      val newNexts = if(nexts.tail.isEmpty) newPieceList() else nexts.tail
+      val pos = (WellWidth / 2 - 1, 0)
+      ((pos, newShape), newNexts)
+    } catch {
+      case e: java.util.NoSuchElementException => popNewPiece(newPieceList())
+      //最初からnextsが空だったときは仕方なく補充してから取り出す
+    }
+  }
+
   // 最初のテトロミノ
-  val piece = newPiece()
+  //val piece = newPiece()
+  val (piece, nexts) = popNewPiece(Nil)
 
   // ゲームの初期値
-  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)))
+  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), nexts)
 
   // ゲームの開始
   world.bigBang(BlockSize * (WellWidth + SideWidth), BlockSize * WellHeight, 1)
