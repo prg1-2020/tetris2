@@ -33,6 +33,9 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
      List.fill(r.nextInt(4))(0).foldLeft(S.random())((shape, _) => shape))
   }
 
+  //holdとか次のテトロミノの情報を出すブロック
+  val infoBlock: S.Shape = List.fill(WellHeight)(List.fill(WellWidth)(Transparent))
+
   // マウスクリックは無視
   def click(p: sgeometry.Pos): World = this
 
@@ -124,9 +127,13 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
       case "LEFT" | "j" => TetrisWorld(((cur_x - 1, cur_y), piece._2) , pile, hold)
       case "UP" => TetrisWorld(((cur_x, cur_y), S.rotate(piece._2)) , pile, hold)
       case "DOWN" => TetrisWorld(((cur_x, cur_y + 1), piece._2) , pile, hold)
-      case "k" =>{
+      case "d" => {//holdの実装
         val (nextPiece, nextHold) = (hold, piece._2)
         TetrisWorld(((cur_x, cur_y),nextPiece) , pile, nextHold)
+      }
+      case "r" => {//ゲームの再開
+        println("Game reset")
+        TetrisWorld(newPiece(), List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), S.random()) 
       }
       case _ => TetrisWorld(piece, pile, hold)
     }
