@@ -164,7 +164,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
         val (nextPiece, nextHold) = (hold, piece._2)
         TetrisWorld(((cur_x, cur_y),nextPiece) , pile, nextHold, stop, next, nextNext, cCount, score, eCount)
       }
-      case "f" => {//ゲームのリセット
+      case "f" | "r" => {//ゲームのリセット
         println("Game Reset")
         println(s"score: ${score}")
         TetrisWorld(newPiece(), List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), S.random(), stop, S.random(), S.random(), 0, 0, 0) 
