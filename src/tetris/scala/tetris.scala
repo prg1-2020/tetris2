@@ -115,7 +115,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
   }
 */
   def tick(): World = {
-    if(piece._2 == List(List(Transparent)) || stop || eCount > 100) return this
+    if(piece._2 == List(List(Transparent)) || stop || eCount >= 100) return this
     val cur_x = piece._1._1
     val cur_y = piece._1._2
     if(collision(TetrisWorld(((cur_x, cur_y + 1), piece._2) , pile, hold, stop, next, nextNext, cCount, score, eCount))) {
@@ -128,9 +128,9 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
         }
         else TetrisWorld(((WellWidth / 2 - 1, 0), next), nextPile, hold, stop, nextNext, S.random(), 0, score + add, eCount)
       }
-      if(eCount > 100){
-        println("clear!")
-        println(s"score: ${score}")
+      if(eCount + eraseCount >= 100){
+        println("clear!") //強制クリア
+        println(s"score: ${score + add}")
       }
       if(collision(nextWorld)) {
         println("Game Over")
@@ -179,7 +179,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
       }
       case _ => TetrisWorld(piece, pile, hold, stop, next, nextNext, cCount, score, eCount)
     }
-    if(collision(nextWorld)) {
+    if(collision(nextWorld) || eCount >= 100) {
       return this
     }
     else if(newStop){
