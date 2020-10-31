@@ -121,7 +121,10 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
     if(collision(TetrisWorld(((cur_x, cur_y + 1), piece._2) , pile, hold, stop, next, nextNext, cCount))) {
       val cpiece = S.shiftSE(piece._2, cur_x, cur_y)
       val (nextPile, eraseCount) = eraseRows(S.combine(pile, cpiece))
-      val nextWorld = TetrisWorld(((WellWidth / 2 - 1, 0), next), nextPile, hold, stop, nextNext, S.random(), cCount)
+      val nextWorld = {
+        if(eraseCount > 0) TetrisWorld(((WellWidth / 2 - 1, 0), next), nextPile, hold, stop, nextNext, S.random(), cCount + 1)
+        else TetrisWorld(((WellWidth / 2 - 1, 0), next), nextPile, hold, stop, nextNext, S.random(), 0)
+      }
       if(collision(nextWorld)){
         println("Game Over")
         return TetrisWorld(((0, 0), List(List(Transparent))), nextPile, hold, stop, next, nextNext, cCount)
