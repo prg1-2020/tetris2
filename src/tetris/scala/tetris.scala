@@ -128,7 +128,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
         }
         else TetrisWorld(((WellWidth / 2 - 1, 0), next), nextPile, hold, stop, nextNext, S.random(), 0, score + add, eCount)
       }
-      if(collision(nextWorld)){
+      if(collision(nextWorld)) {
         println("Game Over")
         println(s"score: ${score}")
         return TetrisWorld(((0, 0), List(List(Transparent))), nextPile, hold, stop, next, nextNext, cCount, score, eCount)
