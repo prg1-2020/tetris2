@@ -120,7 +120,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
     val cur_y = piece._1._2
     if(collision(TetrisWorld(((cur_x, cur_y + 1), piece._2) , pile, hold, stop, next, nextNext, cCount))) {
       val cpiece = S.shiftSE(piece._2, cur_x, cur_y)
-      val (nextPile, eraseCount) = eraseRows(S.combine(pile, cpiece))
+      val (nextPile, eraseCount, add) = eraseRows(S.combine(pile, cpiece))
       val nextWorld = {
         if(eraseCount > 0) TetrisWorld(((WellWidth / 2 - 1, 0), next), nextPile, hold, stop, nextNext, S.random(), cCount + 1)
         else TetrisWorld(((WellWidth / 2 - 1, 0), next), nextPile, hold, stop, nextNext, S.random(), 0)
@@ -162,7 +162,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
       }
       case "r" => {//ゲームのリセット
         println("Game Reset")
-        TetrisWorld(newPiece(), List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), S.random(), stop, S.random(), S.random(), cCount) 
+        TetrisWorld(newPiece(), List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), S.random(), stop, S.random(), S.random(), 0) 
       }
       case "s" => {//ゲームの一時停止と再開
         newStop = !stop
@@ -197,12 +197,12 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, hold: S.Shap
 
   // 6. eraseRows
   // 目的：pile を受け取ったら、揃った行を削除する
-  def eraseRows(pile: S.Shape): (S.Shape, Int) = {
+  def eraseRows(pile: S.Shape): (S.Shape, Int, Int) = {
     def denseRow(row: S.Row): Boolean = {
       row.foldLeft(true)((p, block) => p && (block != Transparent))
     }
     val condensedPile = pile.foldRight(List[List[S.Block]]())((row, nextPile) => if(denseRow(row)) nextPile else row::nextPile)
-    (List.fill(WellHeight - condensedPile.length)(List.fill(WellWidth)(Transparent)) ++ condensedPile, WellHeight - condensedPile.length)
+    (List.fill(WellHeight - condensedPile.length)(List.fill(WellWidth)(Transparent)) ++ condensedPile, WellHeight - condensedPile.length, 100 * (cCount + 1) * (WellHeight - condensedPile.length))
   }
 }
 
