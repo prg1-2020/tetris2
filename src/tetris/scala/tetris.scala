@@ -146,7 +146,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, score: Int) 
   }
 
   // 6. eraseRows
-  // 目的：
+  // 目的：pileの横1列埋まった行の消去と消去した行数を返す
   def eraseRows(pile: S.Shape): (S.Shape,Int) = {
     def fullRow(row: S.Row): Boolean = {
       if(row.filter(_==Transparent).length == 0) true
