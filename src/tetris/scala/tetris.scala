@@ -13,13 +13,15 @@ package tetris
 
 import scala.util.Random
 
+import scala.math.min
+
 import sgeometry.Pos
 import sdraw.{World, Color, Transparent, HSB}
 
 import tetris.{ShapeLib => S}
 
 // テトリスを動かすための関数
-case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[S.Shape], hold: S.Shape) extends World() {
+case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[S.Shape], hold: S.Shape, sp: Int) extends World() {
 
   // マウスクリックは無視
   def click(p: sgeometry.Pos): World = this
@@ -53,7 +55,18 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[
 
   // ステージとメニューをわける壁の描画
   // ステージの右端外に大きさ1/2,幅1,高さ40の白い壁
-  def drawWall(): Boolean = drawRect(A.WellWidth, 0, 0, 0, 1, 40, sdraw.White, 2)
+  // スキルポイントを赤で表示
+  def drawWall(sp: Int): Boolean = {
+    drawRect(A.WellWidth, 0, 0, 0, 1, 40, sdraw.White, 2) &&
+    Range(0, min(sp, A.WellHeight*2)).foldLeft(true)(
+      (bool: Boolean, i: Int) => bool && canvas.drawRect(
+        Pos(A.BlockSize*A.WellWidth +1, 
+        A.BlockSize*A.WellHeight -i*A.BlockSize/2 -A.BlockSize/2 +1), 
+        A.BlockSize/2 -2, 
+        A.BlockSize/2 -2, 
+        sdraw.Red)
+    )
+  }
 
   // 予告の描画
   // x=11マス,大きさ1/3,上から高さ2マスずつ最大2*7=14マス弱まで使う
@@ -62,7 +75,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[
     def drawNextSub(nexts: List[S.Shape], index: Int): Boolean = {
       nexts match {
         case Nil => true
-        case s :: ss => drawShape((11, index * 2),s,3) &&
+        case s :: ss => drawShape((A.WellWidth +1, index * 2),s,3) &&
           drawNextSub(ss, index+1)
       }
     }
@@ -106,26 +119,33 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[
     drawGhostBlock(piece, pile) && //GhostBlockは本体より下に描画する
     drawShape00(pile) &&
     drawShape(pos, shape, 1) &&
-    drawWall() &&
+    drawWall(sp) &&
     drawNexts(nexts) &&
-    drawShape((11, 16), hold, 1)
+    drawShape((A.WellWidth +1, A.WellHeight -4), hold, 1)
   }
 
   // 1, 4, 7. tick
   // 目的：時間の経過に応じて世界を更新する
   def tick(): World = {
     val ((x, y), s) = piece
-    val newWorld = TetrisWorld(((x, y+1), s), pile, nexts, hold)
+    val newWorld = TetrisWorld(((x, y+1), s), pile, nexts, hold, sp)
     if(collision(newWorld.piece, newWorld.pile)){
       //落下してぶつかったら
-      val newPile = eraseRows(S.combine(S.shiftSE(s, x, y), pile)) //堆積
+      val (newPile, addSp) = eraseRows(S.combine(S.shiftSE(s, x, y), pile)) //堆積
       val (newPiece, newNexts) = A.popNewPiece(nexts)
       if(collision(newPiece, newPile)){
         //新しいpieceがぶつかっていたら
         println("Game Over")
-        TetrisWorld(piece, pile, nexts, hold)
-      }else
-        TetrisWorld(newPiece, newPile, newNexts, hold)
+        TetrisWorld(piece, pile, nexts, hold, sp)
+      }else{
+        val newSp = sp + addSp
+        if(newSp >= A.WellHeight*2){
+          println("Game Clear")
+          TetrisWorld(newPiece, newPile, newNexts, hold, A.WellHeight*2)
+        }else{
+          TetrisWorld(newPiece, newPile, newNexts, hold, newSp)
+        }
+      }
     }else
       newWorld
   }
@@ -135,21 +155,22 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[
   def keyEvent(key: String): World = {
     val ((x, y), s) = piece
     val newWorld = (key match {
-      case "RIGHT" => TetrisWorld(((x+1, y), s), pile, nexts, hold)
-      case "LEFT" => TetrisWorld(((x-1, y), s), pile, nexts, hold)
-      case "UP" => TetrisWorld(((x, y), S.rotate(s)), pile, nexts, hold)
-      case "DOWN" => TetrisWorld(((x, y+1), s), pile, nexts, hold)
+      case "RIGHT" => TetrisWorld(((x+1, y), s), pile, nexts, hold, sp)
+      case "LEFT" => TetrisWorld(((x-1, y), s), pile, nexts, hold, sp)
+      case "UP" => TetrisWorld(((x, y), S.rotate(s)), pile, nexts, hold, sp)
+      case "DOWN" => TetrisWorld(((x, y+1), s), pile, nexts, hold, sp)
       case "SPACE" => {
           if(hold == Nil){
             val (newPiece, newNexts) = A.popNewPiece(nexts)
-            TetrisWorld(newPiece, pile, newNexts, s)
+            TetrisWorld(newPiece, pile, newNexts, s, sp)
           } else {
-            TetrisWorld(((A.WellWidth / 2 - 1, 0), hold), pile, nexts, s)
+            TetrisWorld(((A.WellWidth / 2 - 1, 0), hold), pile, nexts, s, sp)
           }
         } // 他のkeyと同じくhold操作によってpieceが重なってしまう場合はhold操作が無視される
-      case _ => TetrisWorld(piece, pile, nexts, hold)
+      case "1" => TetrisWorld(piece, pile, nexts, hold, sp+1)
+      case _ => TetrisWorld(piece, pile, nexts, hold, sp)
     })
-    if(collision(newWorld.piece, newWorld.pile)) TetrisWorld(piece, pile, nexts, hold)
+    if(collision(newWorld.piece, newWorld.pile)) TetrisWorld(piece, pile, nexts, hold, sp)
     else newWorld
   }
 
@@ -165,8 +186,8 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[
   }
 
   // 6. eraseRows
-  // 目的：pileを受け取ったら、揃った行を削除する
-  def eraseRows(pile: S.Shape): S.Shape = {
+  // 目的：pileを受け取ったら、揃った行を削除する、消した行数も返す
+  def eraseRows(pile: S.Shape): (S.Shape, Int) = {
     val pileTemp = pile.foldRight(Nil: S.Shape)(
         (row: S.Row, temp: S.Shape) => 
           if(row.foldLeft(true)((ans: Boolean, block: S.Block) => ans && (block != Transparent))) //全マス色付きだったら
@@ -174,7 +195,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[
           else
             row :: temp
       )
-    S.empty(A.WellHeight-pileTemp.length, A.WellWidth) ++ pileTemp
+    (S.empty(A.WellHeight-pileTemp.length, A.WellWidth) ++ pileTemp, A.WellHeight-pileTemp.length)
   }
 }
 
@@ -219,7 +240,7 @@ object A extends App {
   val (piece, nexts) = popNewPiece(Nil)
 
   // ゲームの初期値
-  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), nexts, Nil)
+  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), nexts, Nil, 0)
 
   // ゲームの開始
   world.bigBang(BlockSize * (WellWidth + SideWidth), BlockSize * WellHeight, 1)
