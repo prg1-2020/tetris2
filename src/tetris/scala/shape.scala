@@ -21,10 +21,10 @@ object ShapeLib {
   // 色とブロックの表現
   type ColorSymbol = Char
 
-  val blockSymbols = List('I', 'J', 'T', 'O', 'Z', 'L', 'S')
+  val blockSymbols = List('I', 'J', 'T', 'O', 'Z', 'L', 'S', 'U', 'C')
   val blockColors = {
     val n = blockSymbols.length
-    for (i <- Range(0, n)) yield (HSB(360f * i / n, 0.3f, 1))
+    for (i <- Range(0, n)) yield (HSB(370f * i / n, 0.3f, 1))
   }
   val colorSymbols = blockSymbols ++ List('G', 'g')
   val colors = blockColors ++ List(DarkGray, LightGray)
@@ -62,7 +62,9 @@ object ShapeLib {
       List("OO", "OO"),
       List("ZZ ", " ZZ"),
       List("L ", "L ", "LL"),
-      List(" SS", "SS "))
+      List(" SS", "SS "),
+      List("U U", "U U", "UUU"),
+      List("CCC", "C  ", "CCC"))
 
   def make(spec: ShapeSpec): Shape = {
 
@@ -77,7 +79,7 @@ object ShapeLib {
 
   // 7種類のテトロミノが入ったリスト
   val allShapes: List[Shape] = shapeSpecs.map(make)
-  val List(shapeI, shapeJ, shapeT, shapeO, shapeZ, shapeL, shapeS) = allShapes
+  val List(shapeI, shapeJ, shapeT, shapeO, shapeZ, shapeL, shapeS, shapeU, shapeC) = allShapes
 
   // 次のテトロミノの選択
   val r = new Random()
