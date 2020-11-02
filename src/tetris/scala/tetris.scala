@@ -129,12 +129,6 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
 }
 
 
-/*
-// 課題８
-// 目的：テトリスゲームを拡張する
-keyEventでDOWNを入力するとテトロミノが１番下まで動くようにする
-*/
-
 
 // ゲームの実行
 object A extends App {
