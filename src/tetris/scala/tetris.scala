@@ -53,7 +53,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[
 
   // ステージとメニューをわける壁の描画
   // ステージの右端外に大きさ1/2,幅1,高さ40の白い壁
-  def drawWall(): Boolean = drawRect(A.WellWidth, 0, 0, 0, 1, 40, HSB(0, 0, 1), 2)
+  def drawWall(): Boolean = drawRect(A.WellWidth, 0, 0, 0, 1, 40, sdraw.White, 2)
 
   // 予告の描画
   // x=11マス,大きさ1/3,上から高さ2マスずつ最大2*7=14マス弱まで使う
@@ -69,12 +69,37 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[
     drawNextSub(nexts, 0)
   }
 
+  // ゴーストブロックの描画
+  def drawGhostBlock(piece: ((Int, Int), S.Shape), pile: S.Shape) = {
+    val ((x,y),s) = piece
+    val searchY = binarySearch(true, false)((checkY: Int) => collision(((x, checkY), s), pile))_
+    val ghostY = searchY(y, A.WellHeight)
+    val ghostS = s.map(_.map((b: S.Block) => if(b==Transparent) b else sdraw.DarkGray))
+    drawShape((x, ghostY), ghostS, 1)
+  }
+
+  // 二分探索
+  //(大きい方はTかFか, 大きい方を返すか)(関数)(小さい方, 大きい方)
+  def binarySearch(ubIs: Boolean, retUb: Boolean)(func: Int => Boolean)(lb: Int, ub: Int): Int = {
+    if(ub - lb <= 1){
+      if(retUb) ub else lb
+    }else{
+      val mid = (lb + ub) / 2
+      if(func(mid) == ubIs){
+        binarySearch(ubIs, retUb)(func)(lb, mid)
+      }else{
+        binarySearch(ubIs, retUb)(func)(mid, ub)
+      }
+    }
+  }
+
   // ゲーム画面の描画
   val CanvasColor = HSB(0, 0, 0.1f)
 
   def draw(): Boolean = {
     val (pos, shape) = piece
     canvas.drawRect(Pos(0, 0), canvas.width, canvas.height, CanvasColor) &&
+    drawGhostBlock(piece, pile) && //GhostBlockは本体より下に描画する
     drawShape00(pile) &&
     drawShape(pos, shape, 1) &&
     drawWall() &&
@@ -87,11 +112,11 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[
   def tick(): World = {
     val ((x, y), s) = piece
     val newWorld = TetrisWorld(((x, y+1), s), pile, nexts, hold)
-    if(collision(newWorld)){
+    if(collision(newWorld.piece, newWorld.pile)){
       //落下してぶつかったら
       val newPile = eraseRows(S.combine(S.shiftSE(s, x, y), pile)) //堆積
       val (newPiece, newNexts) = A.popNewPiece(nexts)
-      if(collision(TetrisWorld(newPiece, newPile, newNexts, hold))){
+      if(collision(newPiece, newPile)){
         //新しいpieceがぶつかっていたら
         println("Game Over")
         TetrisWorld(piece, pile, nexts, hold)
@@ -120,19 +145,19 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[
         } // 他のkeyと同じくhold操作によってpieceが重なってしまう場合はhold操作が無視される
       case _ => TetrisWorld(piece, pile, nexts, hold)
     })
-    if(collision(newWorld)) TetrisWorld(piece, pile, nexts, hold)
+    if(collision(newWorld.piece, newWorld.pile)) TetrisWorld(piece, pile, nexts, hold)
     else newWorld
   }
 
   // 3. collision
-  // 目的：受け取った世界で衝突が起きているかを判定する
-  def collision(world: TetrisWorld): Boolean = {
-    val ((x, y), s) = world.piece
+  // 目的：受け取ったpieceがpileや枠と衝突しているか判定する
+  def collision(w_piece: ((Int, Int), S.Shape), w_pile: S.Shape): Boolean = {
+    val ((x, y), s) = w_piece
     val (r, c) = S.size(s)
     (x < 0) ||
     (x+c > A.WellWidth) ||
     (y+r > A.WellHeight) ||
-    (S.overlap(S.shiftSE(s, x, y), world.pile))
+    (S.overlap(S.shiftSE(s, x, y), w_pile))
   }
 
   // 6. eraseRows
