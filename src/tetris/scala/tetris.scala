@@ -72,12 +72,15 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[
   // ゴーストブロックの描画
   def drawGhostBlock(piece: ((Int, Int), S.Shape), pile: S.Shape) = {
     val ((x,y),s) = piece
-    val searchY = binarySearch(true, false)((checkY: Int) => collision(((x, checkY), s), pile))_
-    val ghostY = searchY(y, A.WellHeight)
+    //val searchY = binarySearch(true, false)((checkY: Int) => collision(((x, checkY), s), pile))_
+    def searchY(checkY: Int): Int = if(collision(((x, checkY+1), s), pile)) checkY else searchY(checkY+1)
+    //二分探索だと空洞があったときうまくいかないので線形探索に変更 
+    val ghostY = searchY(y)
     val ghostS = s.map(_.map((b: S.Block) => if(b==Transparent) b else sdraw.DarkGray))
     drawShape((x, ghostY), ghostS, 1)
   }
 
+  /*
   // 二分探索
   //(大きい方はTかFか, 大きい方を返すか)(関数)(小さい方, 大きい方)
   def binarySearch(ubIs: Boolean, retUb: Boolean)(func: Int => Boolean)(lb: Int, ub: Int): Int = {
@@ -92,6 +95,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[
       }
     }
   }
+  */
 
   // ゲーム画面の描画
   val CanvasColor = HSB(0, 0, 0.1f)
