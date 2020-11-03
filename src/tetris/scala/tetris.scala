@@ -21,7 +21,7 @@ import sdraw.{World, Color, Transparent, HSB}
 import tetris.{ShapeLib => S}
 
 // テトリスを動かすための関数
-case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[S.Shape], hold: S.Shape, sp: Int) extends World() {
+case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[S.Shape], hold: S.Shape, sp: Int, isTitle: Boolean) extends World() {
 
   // マウスクリックは無視
   def click(p: sgeometry.Pos): World = this
@@ -57,7 +57,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[
   // ステージの右端外に大きさ1/2,幅1,高さ40の白い壁
   // スキルポイントを赤で表示
   def drawWall(sp: Int): Boolean = {
-    drawRect(A.WellWidth, 0, 0, 0, 1, 40, sdraw.White, 2) &&
+    drawRect(A.WellWidth, 0, 0, 0, 1, A.WellHeight*2, sdraw.White, 2) &&
     Range(0, min(sp, A.WellHeight*2)).foldLeft(true)(
       (bool: Boolean, i: Int) => bool && canvas.drawRect(
         Pos(A.BlockSize*A.WellWidth +1, 
@@ -110,6 +110,14 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[
   }
   */
 
+  // タイトル画面の描画
+  def drawTitle(isTitle: Boolean): Boolean = {
+    if(isTitle){
+      canvas.drawRect(Pos(0, A.BlockSize*A.WellHeight/2 -20), A.BlockSize*A.WellWidth, 30, sdraw.White)
+      canvas.drawString(Pos(A.BlockSize*A.WellWidth/3, A.BlockSize*A.WellHeight/2), "Press Any Key")
+    }else true
+  }
+
   // ゲーム画面の描画
   val CanvasColor = HSB(0, 0, 0.1f)
 
@@ -121,57 +129,66 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, nexts: List[
     drawShape(pos, shape, 1) &&
     drawWall(sp) &&
     drawNexts(nexts) &&
-    drawShape((A.WellWidth +1, A.WellHeight -4), hold, 1)
+    drawShape((A.WellWidth +1, A.WellHeight -4), hold, 1) &&
+    drawTitle(isTitle)
   }
 
   // 1, 4, 7. tick
   // 目的：時間の経過に応じて世界を更新する
   def tick(): World = {
-    val ((x, y), s) = piece
-    val newWorld = TetrisWorld(((x, y+1), s), pile, nexts, hold, sp)
-    if(collision(newWorld.piece, newWorld.pile)){
-      //落下してぶつかったら
-      val (newPile, addSp) = eraseRows(S.combine(S.shiftSE(s, x, y), pile)) //堆積
-      val (newPiece, newNexts) = A.popNewPiece(nexts)
-      if(collision(newPiece, newPile)){
-        //新しいpieceがぶつかっていたら
-        println("Game Over")
-        TetrisWorld(piece, pile, nexts, hold, sp)
-      }else{
-        val newSp = sp + addSp
-        if(newSp >= A.WellHeight*2){
-          println("Game Clear")
-          TetrisWorld(newPiece, newPile, newNexts, hold, A.WellHeight*2)
+    if(isTitle) TetrisWorld(piece, pile, nexts, hold, sp, isTitle)
+    else{
+      val ((x, y), s) = piece
+      val newWorld = TetrisWorld(((x, y+1), s), pile, nexts, hold, sp, isTitle)
+      if(collision(newWorld.piece, newWorld.pile)){
+        //落下してぶつかったら
+        val (newPile, addSp) = eraseRows(S.combine(S.shiftSE(s, x, y), pile)) //堆積
+        val (newPiece, newNexts) = A.popNewPiece(nexts)
+        if(collision(newPiece, newPile)){
+          //新しいpieceがぶつかっていたら
+          println("Game Over")
+          TetrisWorld(piece, pile, nexts, hold, sp, true)
         }else{
-          TetrisWorld(newPiece, newPile, newNexts, hold, newSp)
+          val newSp = sp + addSp
+          if(newSp >= A.WellHeight*2){
+            println("Game Clear")
+            TetrisWorld(newPiece, newPile, newNexts, hold, A.WellHeight*2, true)
+          }else{
+            TetrisWorld(newPiece, newPile, newNexts, hold, newSp, isTitle)
+          }
         }
-      }
-    }else
-      newWorld
+      }else
+        newWorld
+    }
   }
 
   // 2, 5. keyEvent
   // 目的：キー入力に従って世界を更新する
   def keyEvent(key: String): World = {
-    val ((x, y), s) = piece
-    val newWorld = (key match {
-      case "RIGHT" => TetrisWorld(((x+1, y), s), pile, nexts, hold, sp)
-      case "LEFT" => TetrisWorld(((x-1, y), s), pile, nexts, hold, sp)
-      case "UP" => TetrisWorld(((x, y), S.rotate(s)), pile, nexts, hold, sp)
-      case "DOWN" => TetrisWorld(((x, y+1), s), pile, nexts, hold, sp)
-      case "SPACE" => {
-          if(hold == Nil){
-            val (newPiece, newNexts) = A.popNewPiece(nexts)
-            TetrisWorld(newPiece, pile, newNexts, s, sp)
-          } else {
-            TetrisWorld(((A.WellWidth / 2 - 1, 0), hold), pile, nexts, s, sp)
-          }
-        } // 他のkeyと同じくhold操作によってpieceが重なってしまう場合はhold操作が無視される
-      case "1" => TetrisWorld(piece, pile, nexts, hold, sp+1)
-      case _ => TetrisWorld(piece, pile, nexts, hold, sp)
-    })
-    if(collision(newWorld.piece, newWorld.pile)) TetrisWorld(piece, pile, nexts, hold, sp)
-    else newWorld
+    if(isTitle) {
+      val (piece, nexts) = A.popNewPiece(Nil)
+      TetrisWorld(piece, S.empty(A.WellHeight, A.WellWidth), nexts, Nil, 0, false)
+    }else{
+      val ((x, y), s) = piece
+      val newWorld = (key match {
+        case "RIGHT" => TetrisWorld(((x+1, y), s), pile, nexts, hold, sp, isTitle)
+        case "LEFT" => TetrisWorld(((x-1, y), s), pile, nexts, hold, sp, isTitle)
+        case "UP" => TetrisWorld(((x, y), S.rotate(s)), pile, nexts, hold, sp, isTitle)
+        case "DOWN" => TetrisWorld(((x, y+1), s), pile, nexts, hold, sp, isTitle)
+        case "SPACE" => {
+            if(hold == Nil){
+              val (newPiece, newNexts) = A.popNewPiece(nexts)
+              TetrisWorld(newPiece, pile, newNexts, s, sp, isTitle)
+            } else {
+              TetrisWorld(((A.WellWidth / 2 - 1, 0), hold), pile, nexts, s, sp, isTitle)
+            }
+          } // 他のkeyと同じくhold操作によってpieceが重なってしまう場合はhold操作が無視される
+        case "1" => TetrisWorld(piece, pile, nexts, hold, sp+1, isTitle)
+        case _ => TetrisWorld(piece, pile, nexts, hold, sp, isTitle)
+      })
+      if(collision(newWorld.piece, newWorld.pile)) TetrisWorld(piece, pile, nexts, hold, sp, isTitle)
+      else newWorld
+    }
   }
 
   // 3. collision
@@ -240,7 +257,7 @@ object A extends App {
   val (piece, nexts) = popNewPiece(Nil)
 
   // ゲームの初期値
-  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), nexts, Nil, 0)
+  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), nexts, Nil, 0, true)
 
   // ゲームの開始
   world.bigBang(BlockSize * (WellWidth + SideWidth), BlockSize * WellHeight, 1)
