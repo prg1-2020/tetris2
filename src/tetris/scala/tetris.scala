@@ -254,10 +254,13 @@ object A extends App {
 
   // 最初のテトロミノ
   //val piece = newPiece()
-  val (piece, nexts) = popNewPiece(Nil)
+  val (((x, y), s), nexts) = popNewPiece(Nil)
 
   // ゲームの初期値
-  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), nexts, Nil, 0, true)
+  //val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), nexts, Nil, 0, true)
+  val pile = S.combine(S.shiftSE(s, x, WellHeight-S.size(s)._1), S.empty(WellHeight, WellWidth))
+  val (piece, nexts2) = popNewPiece(nexts)
+  val world = TetrisWorld(piece, pile, nexts2, Nil, 0, true)
 
   // ゲームの開始
   world.bigBang(BlockSize * (WellWidth + SideWidth), BlockSize * WellHeight, 1)
