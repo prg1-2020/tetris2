@@ -58,29 +58,72 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
     drawShape00(pile) &&
     drawShape(pos, shape)
   }
-
-  // 1, 4, 7. tick
-  // 目的：
+  // tick
   def tick(): World = {
-    TetrisWorld(piece, pile)
+    val ((x, y), shape) = piece
+    val world = TetrisWorld(piece, pile)
+    val nextworld = TetrisWorld(((x, y + 1), shape), pile)
+    if(collision(world)) world //GameOver!
+    else if(collision(nextworld)) {
+      val newpile = eraseRows(S.combine(pile, S.shiftSE(shape, x, y)))
+      TetrisWorld(A.newPiece(), newpile)
+    }
+    else nextworld
   }
 
-  // 2, 5. keyEvent
-  // 目的：
+  // keyEvent
+  //目的：key操作、ただし衝突が生じる場合、その操作を無視する
   def keyEvent(key: String): World = {
-    TetrisWorld(piece, pile)
+    var ((x, y), shape) = piece
+    val (x1, y1) = S.size(shape)
+    key match {
+      case "RIGHT" => x += 1
+      case "LEFT" => x -= 1
+      case "UP" => shape = S.rotate(shape)
+      case "DOWN" => y +=1
+      case "w" => {
+        try{
+          var newy = A.WellHeight - x1
+          val i = 0
+          while(newy >= 0){
+            if(!collision(TetrisWorld(((x, newy), shape), pile))){
+              y = newy
+              throw new Exception()
+            }
+            else newy -= 1
+          }
+          
+        }catch{
+          case e: Exception => y
+        }
+      }
+    }
+    val world = TetrisWorld(((x, y), shape), pile)
+    if(collision(world)) TetrisWorld(piece, pile)
+    else world
   }
 
   // 3. collision
-  // 目的：
+  // 目的：世界のほしい仕組みに反していたらtrue
   def collision(world: TetrisWorld): Boolean = {
-    false
+    val TetrisWorld(piece, pile) = world
+    val ((x, y), shape) = piece
+    val (y1, x1) = S.size(shape)
+    x < 0 || x + x1 > A.WellWidth || y + y1 > A.WellHeight || S.overlap(S.shiftSE(shape, x, y), pile)
   }
 
   // 6. eraseRows
-  // 目的：
+  // 目的：pileを受け取ったら、そろった行を削除する
   def eraseRows(pile: S.Shape): S.Shape = {
-    pile
+    def fullrow(r: S.Row): Boolean = {
+      if(r.filter(_ == Transparent).length == 0) true
+      else false
+    }
+    val erased_pile = pile.foldRight(Nil: S.Shape)((r, rs) => {
+      if(fullrow(r)) rs
+      else r :: rs
+    })
+    S.empty(A.WellHeight - erased_pile.length, A.WellWidth) ++ erased_pile
   }
 }
 
@@ -88,8 +131,10 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
 object A extends App {
   // ゲームウィンドウとブロックのサイズ
   val WellWidth = 10
-  val WellHeight = 10
+  val WellHeight = 20
   val BlockSize = 30
+
+
 
   // 新しいテトロミノの作成
   val r = new Random()
