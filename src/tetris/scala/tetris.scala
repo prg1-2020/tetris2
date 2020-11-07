@@ -14,13 +14,14 @@ package tetris
 import scala.util.Random
 
 import sgeometry.Pos
-import sdraw.{World, Color, Transparent, HSB}
+import sdraw.{World, Color, Transparent, HSB, White}
 
 import tetris.{ShapeLib => S}
 
 // テトリスを動かすための関数
-case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends World() {
+case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, finished:Boolean, elapsed:Int, erasedCount:Int) extends World() {
 
+def roundBy(num: Double)(dp: Int): String = s"%1.${dp}f".format(num)
   // マウスクリックは無視
   def click(p: sgeometry.Pos): World = this
 
@@ -56,31 +57,78 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
     val (pos, shape) = piece
     canvas.drawRect(Pos(0, 0), canvas.width, canvas.height, CanvasColor) &&
     drawShape00(pile) &&
-    drawShape(pos, shape)
+    drawShape(pos, shape) &&
+    (canvas.drawString(Pos(10,10), roundBy(elapsed*0.1)(1) + "sec", White))&&
+    (canvas.drawString(Pos(10,30), (if(20-erasedCount >= 0)20-erasedCount else 0) .toString() + "lines left", White))&&
+    (if(finished) canvas.drawString(Pos(canvas.width/2-50, canvas.height/2), if(erasedCount>20)"Game Over"else"Clear!", White) else true)&&
+    (if(finished) canvas.drawString(Pos(canvas.width/2-50, canvas.height/2+20), "TIME:" + roundBy(elapsed*0.1)(1)+"sec", White) else true)
   }
 
   // 1, 4, 7. tick
   // 目的：
   def tick(): World = {
-    TetrisWorld(piece, pile)
+    var ne = elapsed + 1
+    if(elapsed % 3 != 0 || finished) {
+      TetrisWorld(piece, pile, finished,if(finished) elapsed else ne,erasedCount)
+    }
+    else{
+      val ((x,y),shape) = piece
+      val newworld = TetrisWorld(((x,y+ 1), shape), pile, finished, ne,erasedCount)
+      if(collision(newworld)) {
+        var beferase = S.combine(S.shiftSE(shape,x,y),pile)
+        val (erased, combined) = eraseRows(beferase)
+
+        val ((nx,ny),nshape) = A.newPiece()
+        if(erasedCount + erased >= 20 || S.overlap(S.shiftSE(nshape,nx,ny),combined)) {
+          println("Game Over")
+          TetrisWorld(piece, pile, true, elapsed,erasedCount + erased)
+        }
+        else TetrisWorld(((nx,ny),nshape), combined,finished, ne,erasedCount + erased)
+      } 
+      else newworld
+    }
   }
 
   // 2, 5. keyEvent
   // 目的：
   def keyEvent(key: String): World = {
-    TetrisWorld(piece, pile)
+    val ((x,y),shape) = piece
+    var ret = key match {
+      case "RIGHT" => TetrisWorld(((piece._1._1 + 1,piece._1._2), piece._2), pile,finished, elapsed,erasedCount)
+      case "LEFT" => TetrisWorld(((piece._1._1 - 1,piece._1._2), piece._2), pile,finished, elapsed,erasedCount)
+      case "DOWN" => {
+        if(!collision(TetrisWorld(((x,y+1), shape), pile, finished, elapsed,erasedCount))) TetrisWorld(((x,y+1), shape), pile, finished, elapsed,erasedCount)
+        else TetrisWorld(((x,y), shape), pile, finished, elapsed,erasedCount)
+      }
+      case "UP" => TetrisWorld(((piece._1._1,piece._1._2), S.rotate(S.rotate(S.rotate(piece._2)))), pile,finished, elapsed,erasedCount)
+      case "x" => TetrisWorld(((piece._1._1,piece._1._2), S.rotate(S.rotate(S.rotate(piece._2)))), pile,finished, elapsed,erasedCount)
+      case "z" => TetrisWorld(((piece._1._1,piece._1._2), S.rotate(piece._2)), pile,finished, elapsed,erasedCount)
+      case "SPACE" => {
+        var yd = 1
+        while(!collision(TetrisWorld(((x,y+yd), shape), pile, finished, elapsed,erasedCount))){
+          yd= yd+1
+        }
+        TetrisWorld(((x,y+yd-1), shape), pile, finished, elapsed,erasedCount)
+      }
+      case _ => TetrisWorld(piece, pile,finished,elapsed,erasedCount)
+    }
+    if(finished || collision(ret)) TetrisWorld(piece, pile, finished, elapsed,erasedCount) else ret
   }
 
   // 3. collision
   // 目的：
   def collision(world: TetrisWorld): Boolean = {
-    false
+    val ((x,y),shape) = world.piece
+    val (ph,pw) = S.size(shape)
+    val (h,w) = (A.WellHeight,A.WellWidth)
+    x < 0 || x + pw-1 >= w || y + ph-1 >= h || S.overlap(S.shiftSE(shape,x,y), world.pile)
   }
 
   // 6. eraseRows
   // 目的：
-  def eraseRows(pile: S.Shape): S.Shape = {
-    pile
+  def eraseRows(pile: S.Shape): (Int, S.Shape) = {
+    var buf = pile.foldLeft((0,Nil):(Int,S.Shape))((ret, row) => if(row.count(_!=Transparent) == A.WellWidth) (ret._1 + 1, ret._2) else (ret._1, row::ret._2))
+    (buf._1, S.padTo(buf._2,A.WellHeight,A.WellWidth).reverse)
   }
 }
 
@@ -88,7 +136,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
 object A extends App {
   // ゲームウィンドウとブロックのサイズ
   val WellWidth = 10
-  val WellHeight = 10
+  val WellHeight = 20
   val BlockSize = 30
 
   // 新しいテトロミノの作成
@@ -104,8 +152,8 @@ object A extends App {
   val piece = newPiece()
 
   // ゲームの初期値
-  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)))
+  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), false, 0, 0)
 
   // ゲームの開始
-  world.bigBang(BlockSize * WellWidth, BlockSize * WellHeight, 1)
+  world.bigBang(BlockSize * WellWidth, BlockSize * WellHeight, 0.1)
 }

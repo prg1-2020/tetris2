@@ -11,7 +11,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.concurrent.SynchronousQueue;
-
 import javax.swing.Timer;
 
 /**
@@ -160,6 +159,7 @@ public abstract class World implements KeyListener {
 
   private void updateWorld() {
     this.world = this.world.onTick();
+
     this.world.theCanvas = this.theCanvas;
     this.world.draw();
   }
