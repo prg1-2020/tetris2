@@ -12,7 +12,6 @@ abstract class World() { world =>
       world.keyEvent(key)._world
     def draw(): Boolean = world.draw()
   }
-
   var theCanvas: Option[Canvas] = None
   def canvas: Canvas = {
     if (theCanvas.isEmpty) theCanvas = Some(Canvas(_world.theCanvas))
@@ -20,7 +19,7 @@ abstract class World() { world =>
   }
 
   def bigBang(width: Int, height: Int, t: Double): Boolean = _world.bigBang(width, height, t)
-  def endOfWorld(s: String) { _world.endOfWorld(s) }
+  def endOfWorld(s: String):Unit= { _world.endOfWorld(s) }
 
   def draw(): Boolean
 

@@ -103,10 +103,10 @@ public class Canvas {
   }
 
   //to draw a message at p
-  public boolean drawString(Posn p, String message) {
+  public boolean drawString(Posn p, String message, IColor color) {
     // getG().setColor(c.getColor());
     Graphics g = getG();
-    g.setColor(Color.black);
+    g.setColor(color.getColor());
     g.drawString(message, p.x, p.y);
     update();
     return true;

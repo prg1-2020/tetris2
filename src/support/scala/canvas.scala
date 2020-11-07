@@ -38,6 +38,6 @@ case class Canvas(_canvas: JavaCanvas) {
   def drawRect(c: Pos, width: Int, height: Int, color: IColor): Boolean =
     _canvas.drawRect(new JavaPos(c.x, c.y), width, height, color)
 
-  def drawString(c: Pos, msg: String): Boolean =
-  _canvas.drawString(new JavaPos(c.x, c.y), msg)
+  def drawString(c: Pos, msg: String, color:IColor): Boolean =
+  _canvas.drawString(new JavaPos(c.x, c.y), msg, color)
 }
