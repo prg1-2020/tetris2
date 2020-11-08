@@ -85,64 +85,154 @@ object ShapeLib {
   def random(): Shape = allShapes(r.nextInt(allShapes.length))
 
   // 1. duplicate
-  // 目的：
+  // 目的：整数nと任意の型の値aを受け取りn個のaのリストを返す
+  def duplicate[A](n: Int, a: A): List[A] = {
+    if (n <= 0) Nil
+    else a :: duplicate(n-1, a)
+  }
 
 
 
   // 2. empty
-  // 目的：
+  // 目的：row行cols列の空のshapeを作る
+  def empty(rows: Int, cols: Int): Shape = {
+    duplicate(rows, duplicate(cols, Transparent))
+  }
 
 
 
   // 3. size
-  // 目的：
+  // 目的：受け取ったshapeのサイズを(行数, 列数)の形で返す
+  def size(s: Shape): (Int, Int) = {
+    (s.length, s.foldRight(0)((a, b) => max(a.length, b)))
+  }
 
 
 
   // 4. blockCount
-  // 目的：
+  // 目的：受け取ったshapeに含まれる空でないブロックの数を返す
+  def blockCount(s: Shape): Int = {
+    s.foldRight(0)((a, b) => b + a.foldRight(0)((c, d) => if(c != Transparent) d+1 else d ))
+  }
 
 
 
   // 5. wellStructured
-  // 目的：
-
+  // 目的：受け取ったshapeがまっとうであるかを判断する
+  def wellStructured(x: Shape): Boolean = {
+     val (r, c) = size(x)
+     r >= 1 && c >= 1 && x.foldRight(true)((a, b) => b && c == a.length)
+   }
 
 
   // 6. rotate
-  // 目的：
-  // 契約：
+  // 目的：受け取ったshapeを反時計回りに90度回転させたshapeを返す
+  // 契約：引数のshapeはまっとうである。
+  def rotate(sh: Shape): Shape = {
+     assert(wellStructured(sh))
+     val (rows, cols) = size(sh)
+     Range(0, cols).toList.map(i => {
+       Range(0, rows).toList.map(j => {
+         sh(j)(cols-i-1)
+       })
+    })
+  }
 
 
 
   // 7. shiftSE
-  // 目的：
+  // 目的：受け取ったshapeを右にx、左にyずらしたshapeを返す
+  def shiftSE(s: Shape, x: Int, y: Int): Shape = {
+    val(r, c) = size(s)
+    (List.range(0, r +y)) map{
+      a => (List.range(0, c +x)) map{
+        b => if(y <= a && x <= b) s(a-y)(b-x)
+        else Transparent
+      }
+    }
+  }
+    
 
 
 
   // 8. shiftNW
-  // 目的：
+  // 目的：受け取ったshapeを左にx、上にyずらしたshapeを返す
+  def shiftNW(s: Shape, x: Int, y: Int): Shape = {
+    val(r, c) = size(s)
+    (List.range(0, r +y)) map{
+      a => (List.range(0, c +x)) map{
+        b => if(a<r && b<c) s(a)(b)
+        else Transparent
+      }
+    }
+  }
 
 
 
   // 9. padTo
-  // 目的：
-  // 契約：
+  // 目的：受け取ったshapeをrows行cols列に拡大したshapeを返す
+  // 契約：rows,colsはshapeの行数・列数以上
+  def padTo(s: Shape, rows: Int, cols: Int) = {
+    val (r, c) = size(s)
+    assert(r<= rows && c<= cols)
+    shiftNW(s, cols -c, rows - r)
+  }
 
 
 
   // 10. overlap
-  // 目的：
+  // 目的：2つのshapeが重なりを持つかを判断する
+  def overlap(a: Shape, b: Shape): Boolean = {
+    val (r1, c1) = size(a)
+    val (r2, c2) = size(b)
+    def sub(r1:Row, r2: Row):Boolean = {
+      (r1, r2) match {
+        case (Nil, Nil) => false
+        case (ri, Nil) => false
+        case (Nil, r2) => false
+        case (x::xs, y::ys) => {
+          if ((x != Transparent)&&(y != Transparent)) true
+          else false || sub(xs, ys)
+        }
+      }
+    }
+    (a, b) match{
+      case (Nil, Nil) => false
+      case (a, Nil) => false
+      case (Nil, b) => false
+      case (x::xs, y::ys) => sub(x,y) || overlap(xs, ys)
+    }
+  }
+
+
 
 
 
   // 11. combine
-  // 目的：
-  // 契約：
+  // 目的：2つのshapeを結合する
+  // 契約：引数のshapeは重なりを持たない
+  def combine(x:Shape, y:Shape):Shape={
+     assert(!overlap(x,y))
+     def subcombine(r1:Row, r2:Row):Row={
+       (r1,r2) match{
+         case (Nil, Nil) => Nil
+         case (r1, Nil) => r1
+         case (Nil, r2) => r2
+         case (a::as, b::bs) => {
+           if (a!=Transparent) a::subcombine(as,bs)
+           else b::subcombine(as,bs)
+         }
+       }
+     }
+     (x,y) match{
+       case (Nil, Nil) => Nil
+       case (x, Nil) => x
+       case (Nil, y) => y
+       case (p::ps, q::qs) => subcombine(p,q)::combine(ps,qs)
+     }
+   }
+  }
 
-
-
-}
 
 // テスト
 object ShapeTest extends App {
