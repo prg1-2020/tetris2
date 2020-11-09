@@ -180,6 +180,21 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
 // ゲームの実行
 object A extends App {
   // ゲームウィンドウとブロックのサイズ
+  println("enter difficulty")
+  println("1:easy,2:normal,3:hard,4:very hard")
+  val diff = io.StdIn.readLine()
+
+
+  def def_diff(diff:String):Double={
+    diff match{
+        case "1"=> 1.5
+        case "2"=> 1.0
+        case "3"=> 0.5
+        case "4"=> 0.2
+        case _ => 1.0
+    }
+  }
+  val speed = def_diff(diff)
   val WellWidth = 10
   val WellHeight = 10
   val BlockSize = 30
@@ -200,5 +215,6 @@ object A extends App {
   val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)))
 
   // ゲームの開始
-  world.bigBang(BlockSize * WellWidth, BlockSize * WellHeight, 1)
+  println(speed)
+  world.bigBang(BlockSize * WellWidth, BlockSize * WellHeight, speed)
 }
