@@ -54,33 +54,99 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
 
   def draw(): Boolean = {
     val (pos, shape) = piece
+    val (gPos, gShape) = getGhost()
     canvas.drawRect(Pos(0, 0), canvas.width, canvas.height, CanvasColor) &&
     drawShape00(pile) &&
+    drawShape(gPos, gShape) &&
     drawShape(pos, shape)
   }
 
-  // 1, 4, 7. tick
-  // 目的：
+  def getGhost(): ((Int, Int), S.Shape) = {
+    
+    val (pos, shape) = this.hardDrop().piece
+    def changeCol(c: Color): Color = {
+     c match{
+       case Transparent => c
+       case _ => sdraw.DarkGray
+     }
+    }
+    val grayShape = shape.map(_.map(changeCol))
+
+    (pos, grayShape)
+  }
+
   def tick(): World = {
-    TetrisWorld(piece, pile)
+    val ((x, y), s) = piece
+    val (h, w) = S.size(s)
+    val nextW = TetrisWorld(((x, y+1), s), pile)
+
+    if(y+h == A.WellHeight || collision(nextW)){
+      val newW = TetrisWorld(A.newPiece(), eraseRows(S.combine(S.shiftSE(s,x,y), pile)))
+      if(collision(newW)){
+        //endOfWorld("Game Over")
+        println("GameOver")
+      }
+      newW
+      
+    }else{
+      nextW
+    }
   }
 
-  // 2, 5. keyEvent
-  // 目的：
+  def hardDrop(): TetrisWorld = {
+    val ((x, y), s) = piece
+    val (h, w) = S.size(s)
+    val nextW = TetrisWorld(((x, y+1), s), pile)
+    if(collision(nextW)) this
+    else nextW.hardDrop()
+  }
+
   def keyEvent(key: String): World = {
-    TetrisWorld(piece, pile)
+    var ((x, y), s) = piece
+    
+    val nextW =
+      key match{
+        case "RIGHT" => TetrisWorld(((x+1, y), s), pile)
+        case "LEFT" =>  TetrisWorld(((x-1, y), s), pile)
+        case "UP" =>  TetrisWorld(((x, y), S.rotate(s)), pile)
+        case "DOWN" => hardDrop()
+      }
+
+    if(collision((nextW))){
+      this
+    }else{
+      nextW
+    }
+    
   }
 
-  // 3. collision
-  // 目的：
+
+
   def collision(world: TetrisWorld): Boolean = {
-    false
+    val ((x, y), s) = world.piece
+    val (h, w) = S.size(s)
+    val absS = S.shiftSE(s,x,y)
+
+    x < 0 || A.WellWidth < x+w || A.WellHeight < y+h || S.overlap(absS, world.pile)
   }
 
-  // 6. eraseRows
-  // 目的：
+
   def eraseRows(pile: S.Shape): S.Shape = {
-    pile
+
+    //揃った行(けすべき) => false, 揃ってない行(けさないべき) => true
+    def thisFilter[A](row:List[A]):Boolean = {
+      row.map(x => if(x!=Transparent) false else true).foldLeft(false)(_||_)
+    }
+    def padToButOnlyToSouth(s: S.Shape, rows: Int): S.Shape = {
+      val sr = s.length
+      assert(rows >= sr)
+      S.shiftSE(s, 0, rows-sr)
+    }
+
+    val newPile = pile.filter(thisFilter)
+    val formattedPile = padToButOnlyToSouth(newPile, A.WellHeight)
+
+    formattedPile
   }
 }
 
@@ -88,7 +154,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
 object A extends App {
   // ゲームウィンドウとブロックのサイズ
   val WellWidth = 10
-  val WellHeight = 10
+  val WellHeight = 20
   val BlockSize = 30
 
   // 新しいテトロミノの作成
