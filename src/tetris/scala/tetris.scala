@@ -19,7 +19,7 @@ import sdraw.{World, Color, Transparent, HSB}
 import tetris.{ShapeLib => S}
 
 // テトリスを動かすための関数
-case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends World() {
+case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, life: Int) extends World() {
 
   // マウスクリックは無視
   def click(p: sgeometry.Pos): World = this
@@ -63,16 +63,16 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
   // 目的：
   def tick(): World = {
     val ((x,y),mino) = piece
-    val nw = TetrisWorld(((x,y+1), mino), pile)
+    val nw = TetrisWorld(((x,y+1), mino), pile, life)
     if (collision(nw)) {
       val npile = eraseRows(S.combine(pile, S.shiftSE(mino, x, y)))
       val npiece = A.newPiece()
       val ((nx,ny),nmino) = npiece
       if (S.overlap(npile,S.shiftSE(nmino,nx, ny))) {
-        //endofWorld("Game Over")
-        TetrisWorld(piece,pile)
+        //println("gameover")
+        TetrisWorld(piece,pile,0)
       }
-      else TetrisWorld(npiece,npile)
+      else TetrisWorld(npiece,npile,life)
     }
     else nw
   }
@@ -81,17 +81,26 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
   // 目的：
   def keyEvent(key: String): World = {
     var ((x,y), mino) = piece
+    var nlife = life
     if(key == "RIGHT") x += 1
     if(key == "LEFT") x -= 1
     if(key == "UP") mino = S.rotate(mino)
     // 下キーで操作中のミノを底まで
     if(key == "DOWN") {
-      while (!collision(TetrisWorld(((x,y+1), mino), pile))){
+      while (!collision(TetrisWorld(((x,y+1), mino), pile,life))){
        y +=1
       }
     }
-    val nw = TetrisWorld(((x,y), mino), pile)
-    if (collision(nw)) TetrisWorld(piece, pile)
+    if(key == "w" && life > 0 ){
+      var npiece = A.newPiece()
+      var ((nx,ny), nmino) = npiece
+      nlife -= 1
+      x = nx
+      y = ny
+      mino = nmino
+    }
+    val nw = TetrisWorld(((x,y), mino), pile, nlife)
+    if (collision(nw)) TetrisWorld(piece, pile, nlife)
     else nw
   }
 
@@ -135,7 +144,7 @@ object A extends App {
   val piece = newPiece()
 
   // ゲームの初期値
-  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)))
+  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)), 2)
 
   // ゲームの開始
   world.bigBang(BlockSize * WellWidth, BlockSize * WellHeight, 1)
