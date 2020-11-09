@@ -76,7 +76,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
       val new_pile = eraseRows(S.combine(S.shiftSE(sh, x, y), pile))
       val new_piece = A.newPiece()
       val new_world = TetrisWorld(new_piece, new_pile)
-      if(collision(new_world)) TetrisWorld(piece, pile) // endOfWorldが正常な状態じゃないらしいので見かけ上動作停止
+      if(collision(new_world)) this.endOfWorld("Game Over")
       else new_world
     }
     else world
