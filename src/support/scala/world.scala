@@ -7,7 +7,7 @@ abstract class World() { world =>
     override def onClick(p: geometry.Posn): _World =
       world.click(sgeometry.Pos(p.x, p.y))._world
     def onTick(): _World =
-      world.tick()._world
+      world.finishWorld(world.tick()._world)
     def onKeyEvent(key: String): _World =
       world.keyEvent(key)._world
     def draw(): Boolean = world.draw()
@@ -19,8 +19,16 @@ abstract class World() { world =>
     theCanvas.get
   }
 
+  private var finish = false
+  private var finishstr = "default"
+
   def bigBang(width: Int, height: Int, t: Double): Boolean = _world.bigBang(width, height, t)
-  def endOfWorld(s: String) { _world.endOfWorld(s) }
+  def finishWorld(_world: _World): _World = { if(finish) _world.endOfWorld(finishstr) else _world }
+  def endOfWorld(s: String): World = {
+    this.finish = true;
+    this.finishstr = s;
+    this
+  }
 
   def draw(): Boolean
 
