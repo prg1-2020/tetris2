@@ -60,34 +60,81 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
   }
 
   // 1, 4, 7. tick
-  // 目的：
+    // 目的：時間経過で落下させ、一番下まできたら落下をやめる
   def tick(): World = {
-    TetrisWorld(piece, pile)
+    val ((x,y),shape) = piece
+    if(collision(TetrisWorld(((x,y+1),shape),pile))){
+      TetrisWorld(A.newPiece(),eraseRows(S.combine(S.shiftSE(shape,x,y),pile)))
+    }else{
+      TetrisWorld(((x,y+1),shape),pile)
+    }
+  }
+  // 2, 5. keyEvent
+    // 目的：キー入力によってworldを変更するが、衝突が生じる際は無視する
+  def keyEvent(key: String): World = {
+    val ((x,y),shape) = piece
+    key match {
+      case "RIGHT" => {
+        if(collision(TetrisWorld(((x+1,y),shape),pile))){
+          TetrisWorld(piece,pile)
+        }else{
+          TetrisWorld(((x+1,y),shape),pile)
+        }
+      }
+      case "LEFT" => {
+        if(collision(TetrisWorld(((x-1,y),shape),pile))){
+          TetrisWorld(piece,pile)
+        }else{
+          TetrisWorld(((x-1,y),shape),pile)
+        }
+      }
+      case "UP" => {
+        if(collision(TetrisWorld(((x,y),S.rotate(shape)),pile))){
+          TetrisWorld(piece,pile)
+        }else{
+          TetrisWorld(((x,y+1),S.rotate(shape)),pile)
+        }
+      }
+      case "DOWN" => {
+        if(collision(TetrisWorld(((x,y+1),shape),pile))){
+          TetrisWorld(piece,pile)
+        }else{
+          TetrisWorld(((x,y+1),shape),pile)
+        }
+      }
+      case _ => {
+        TetrisWorld(piece, pile)
+      }
+    }
   }
 
-  // 2, 5. keyEvent
-  // 目的：
-  def keyEvent(key: String): World = {
-    TetrisWorld(piece, pile)
-  }
 
   // 3. collision
-  // 目的：
+   // 目的：受け取ったworldで衝突が起きているか判定する
   def collision(world: TetrisWorld): Boolean = {
-    false
+    val TetrisWorld(((x,y),shape),plie) = world
+    val (s,t) = S.size(shape)
+    if(x<0 | x+t > A.WellWidth | y<0 | y+s> A.WellHeight) true
+    else S.overlap(S.shiftSE(shape,x,y),pile) 
   }
 
   // 6. eraseRows
-  // 目的：
+    // 目的：pileの揃った行を削除する
   def eraseRows(pile: S.Shape): S.Shape = {
-    pile
+    def erase(_pile: S.Shape): S.Shape = {
+      _pile.foldRight(Nil: S.Shape)((r,rs) =>
+        if(r.filter(_ == Transparent).length == 0) rs 
+        else r::rs
+      )
+    }
+    S.empty(A.WellHeight-erase(pile).length,A.WellWidth) ++ erase(pile)
   }
 }
 
 // ゲームの実行
 object A extends App {
   // ゲームウィンドウとブロックのサイズ
-  val WellWidth = 10
+  val WellWidth = 15
   val WellHeight = 10
   val BlockSize = 30
 
