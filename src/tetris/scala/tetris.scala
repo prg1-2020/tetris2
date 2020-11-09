@@ -54,35 +54,28 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
 
   def draw(): Boolean = {
     val (pos, shape) = piece
+    val (gPos, gShape) = getGhost()
     canvas.drawRect(Pos(0, 0), canvas.width, canvas.height, CanvasColor) &&
     drawShape00(pile) &&
-    drawShape(pos, shape)
+    drawShape(pos, shape) && 
+    drawShape(gPos, gShape)
   }
 
-  // 1, 4, 7. tick
-  // 目的： (課題1)pieceのyをインクリメントし，下に1ブロック下げる。
-  //      (課題4)pieceの落下は画面一番下で停止するように。
-  //      (課題7)pieceをpileへ堆積，行削除の判定
-  def tick(): World = {
-    //課題1
-    /*
-    val ((x, y), s) = piece
-    S.show(s)
-    TetrisWorld(((x, y+1), s), pile)
-    */
-
-    //課題4
-    /*
-    val ((x, y), s) = piece
-    val (h, w) = S.size(s)
-    if(y+h == A.WellHeight){
-      TetrisWorld(piece, pile)
-    }else{
-      TetrisWorld(((x, y+1), s), pile)
+  def getGhost(): ((Int, Int), S.Shape) = {
+    
+    val (pos, shape) = this.hardDrop().piece
+    def changeCol(c: Color): Color = {
+     c match{
+       case Transparent => c
+       case _ => sdraw.DarkGray
+     }
     }
-    */
+    val grayShape = shape.map(_.map(changeCol))
 
-    //課題7
+    (pos, grayShape)
+  }
+
+  def tick(): World = {
     val ((x, y), s) = piece
     val (h, w) = S.size(s)
     val nextW = TetrisWorld(((x, y+1), s), pile)
@@ -90,66 +83,54 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
     if(y+h == A.WellHeight || collision(nextW)){
       val newW = TetrisWorld(A.newPiece(), eraseRows(S.combine(S.shiftSE(s,x,y), pile)))
       if(collision(newW)){
-        endOfWorld("Game Over")
+        //endOfWorld("Game Over")
+        println("GameOver")
       }
       newW
       
     }else{
       nextW
     }
-
   }
 
-  // 2, 5. keyEvent
-  // 目的：(課題2)矢印キー入力でpieceを移動。UPで反時計に90°回転
-  //     (課題5)入力により衝突が発生するならば無視。
+  def hardDrop(): TetrisWorld = {
+    val ((x, y), s) = piece
+    val (h, w) = S.size(s)
+    val nextW = TetrisWorld(((x, y+1), s), pile)
+    if(collision(nextW)) this
+    else nextW.hardDrop()
+  }
+
   def keyEvent(key: String): World = {
-    //課題2
-    /*
-    var ((x, y), s) = piece
-
-    key match{
-      case "RIGHT" => x = x+1
-      case "LEFT" =>  x = x-1
-      case "UP" =>  s = S.rotate(s)
-    }
-
-    TetrisWorld(((x, y), s), pile)
-    */
-    
-    //課題5
     var ((x, y), s) = piece
     
-    key match{
-      case "RIGHT" => x = x+1
-      case "LEFT" =>  x = x-1
-      case "UP" =>  s = S.rotate(s)
-    }
+    val nextW =
+      key match{
+        case "RIGHT" => TetrisWorld(((x+1, y), s), pile)
+        case "LEFT" =>  TetrisWorld(((x-1, y), s), pile)
+        case "UP" =>  TetrisWorld(((x, y), S.rotate(s)), pile)
+        case "DOWN" => hardDrop()
+      }
 
-    val nextW = TetrisWorld(((x, y), s), pile)
-    
     if(collision((nextW))){
-      TetrisWorld(piece, pile)
+      this
     }else{
       nextW
     }
     
   }
 
-  // 3. collision
-  // 目的：(課題3)pieceが画面外 or pileと衝突でTrue
-  def collision(world: TetrisWorld): Boolean = {
 
+
+  def collision(world: TetrisWorld): Boolean = {
     val ((x, y), s) = world.piece
     val (h, w) = S.size(s)
     val absS = S.shiftSE(s,x,y)
 
-    x < 0 || A.WellWidth < x + w || S.overlap(absS, world.pile)
-    
+    x < 0 || A.WellWidth < x+w || A.WellHeight < y+h || S.overlap(absS, world.pile)
   }
 
-  // 6. eraseRows
-  // 目的： pileを受け取ったら揃った行を削除する。
+
   def eraseRows(pile: S.Shape): S.Shape = {
 
     //揃った行(けすべき) => false, 揃ってない行(けさないべき) => true
@@ -173,7 +154,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
 object A extends App {
   // ゲームウィンドウとブロックのサイズ
   val WellWidth = 10
-  val WellHeight = 10
+  val WellHeight = 20
   val BlockSize = 30
 
   // 新しいテトロミノの作成
