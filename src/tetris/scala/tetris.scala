@@ -84,6 +84,12 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
     if(key == "RIGHT") x += 1
     if(key == "LEFT") x -= 1
     if(key == "UP") mino = S.rotate(mino)
+    // 下キーで操作中のミノを底まで
+    if(key == "DOWN") {
+      while (!collision(TetrisWorld(((x,y+1), mino), pile))){
+       y +=1
+      }
+    }
     val nw = TetrisWorld(((x,y), mino), pile)
     if (collision(nw)) TetrisWorld(piece, pile)
     else nw
