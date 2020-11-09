@@ -57,8 +57,8 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
     val (gPos, gShape) = getGhost()
     canvas.drawRect(Pos(0, 0), canvas.width, canvas.height, CanvasColor) &&
     drawShape00(pile) &&
-    drawShape(pos, shape) && 
-    drawShape(gPos, gShape)
+    drawShape(gPos, gShape) &&
+    drawShape(pos, shape)
   }
 
   def getGhost(): ((Int, Int), S.Shape) = {
