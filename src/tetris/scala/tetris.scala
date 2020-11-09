@@ -91,7 +91,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, life: Int) e
        y +=1
       }
     }
-    if(key == "w" && life > 0 ){
+    if(key == "c" && life > 0 ){
       var npiece = A.newPiece()
       var ((nx,ny), nmino) = npiece
       nlife -= 1
