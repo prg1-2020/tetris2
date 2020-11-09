@@ -60,27 +60,48 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
   }
 
   // 1, 4, 7. tick
-  // 目的：
+  // 目的： テトロミノが下に移動できなくなったら適切な処理を行う
   def tick(): World = {
-    TetrisWorld(piece, pile)
+    val ((x,y),shape) = piece
+    val newWorld = TetrisWorld(((x,y+1),shape), pile)
+    if (collision(newWorld)){
+      val z = TetrisWorld(A.newPiece(),eraseRows(S.combine(S.shiftSE(shape,x,y),pile)))
+      if (collision(z)) z
+      else z
+    }
+    else newWorld
   }
 
   // 2, 5. keyEvent
-  // 目的：
+  // 目的： 衝突が起きるならその操作を無視する
   def keyEvent(key: String): World = {
-    TetrisWorld(piece, pile)
+    val ((x, y), s) = piece
+    val newWorld = (key match {
+      case "RIGHT" => TetrisWorld(((x + 1, y), s), pile)
+      case "LEFT" => TetrisWorld(((x - 1, y), s), pile)
+      case "UP" => TetrisWorld(((x, y), S.rotate(s)), pile)
+      case "DOWN" => TetrisWorld(((x, y + 1), s), pile)
+      case _ => TetrisWorld(piece, pile)
+    })
+    if (collision(newWorld)) TetrisWorld(piece, pile)
+    else newWorld
   }
 
   // 3. collision
-  // 目的：
+  // 目的： 衝突が起きているか判定する
   def collision(world: TetrisWorld): Boolean = {
-    false
+    val ((x, y), s) = world.piece
+    val (r, c) = S.size(s)
+    (x < 0) || (x + c > A.WellWidth) || (y + r > A.WellHeight) || (S.overlap(S.shiftSE(s, x, y), world.pile))
   }
 
   // 6. eraseRows
-  // 目的：
+  // 目的： そろった行を削除する
   def eraseRows(pile: S.Shape): S.Shape = {
-    pile
+    def rowcheck(row: S.Row): Boolean = {
+      row.contains(Transparent) || row.length != A.WellWidth
+    }
+    S.empty(A.WellHeight - pile.count(rowcheck), A.WellWidth) ++ pile.filter(rowcheck)
   }
 }
 
@@ -106,6 +127,15 @@ object A extends App {
   // ゲームの初期値
   val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)))
 
+  // input speed
+  println("希望のスピード（０より大きい実数）を入力してください...")
+  var InputSpeed = io.StdIn.readLine().toFloat
+  if (InputSpeed <= 0) {
+    println("不適切な入力です。")
+    sys.exit(1)
+  }
+  val RealSpeed = 1 / InputSpeed
+
   // ゲームの開始
-  world.bigBang(BlockSize * WellWidth, BlockSize * WellHeight, 1)
+  world.bigBang(BlockSize * WellWidth, BlockSize * WellHeight, RealSpeed)
 }
