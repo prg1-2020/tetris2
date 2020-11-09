@@ -95,6 +95,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
     if(key == "RIGHT") x += 1
     if(key == "LEFT") x -= 1
     if(key == "UP") sh = S.rotate(sh)
+    if(key == "DOWN") y += 1
     val now = TetrisWorld(piece, pile)
     val world = TetrisWorld(((x, y), sh), pile)
     if (collision(world)) TetrisWorld(piece, pile)
