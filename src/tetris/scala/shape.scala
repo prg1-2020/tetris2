@@ -85,62 +85,130 @@ object ShapeLib {
   def random(): Shape = allShapes(r.nextInt(allShapes.length))
 
   // 1. duplicate
-  // 目的：
-
-
+   // 目的：n個のaからなるリストを作る
+  def duplicate[A](n:Int,a:A): List[A] = {
+    if (n <= 0) Nil
+    else a :: duplicate(n-1,a)
+  }
 
   // 2. empty
-  // 目的：
-
-
+    // 目的：rows行cols列の空のshapeを作る
+  def empty(rows:Int,cols:Int): Shape = {
+    duplicate(rows,duplicate(cols,Transparent))
+  }
 
   // 3. size
-  // 目的：
-
+    // 目的：shapeのサイズを（行数,列数）の形で返す
+  def size(s:Shape): (Int,Int) = {
+    (s.length,s.foldRight(0)((a,b) => max(a.length,b)))
+  }
 
 
   // 4. blockCount
-  // 目的：
-
+    // 目的：shapeに含まれる空でないブロックの数を求める
+  def blockCount(s:Shape): Int = {
+    s.foldRight(0)((a,b) => b+a.foldRight(0)((c,d)=> if(c == Transparent) d else d+1 ))
+  }
 
 
   // 5. wellStructured
-  // 目的：
+   // 目的：受け取ったshapeがまっとうであるかを判断する
+  def wellStructured(s:Shape): Boolean = {
+    val (a,b) = size(s)
+    a >= 1 && b >= 1 && s.foldRight(true)((c, d) => d && b == c.length)
+  }
 
 
 
   // 6. rotate
-  // 目的：
-  // 契約：
+   // 目的：受け取ったshapeを反時計回りに90度回転させたshapeを求める
+  // 契約：引数のshapeはまっとうである 
+  def rotate(s: Shape): Shape = {
+    assert(wellStructured(s))
+    val (rows,cols) = size(s)
+    (List.range(0,cols)) map { i => (List.range(0,rows)) map { j => s(j)(cols - i - 1)}}
+  }
+
 
 
 
   // 7. shiftSE
-  // 目的：
-
+    // 目的：受け取ったshapeをみぎにx,下にyずらしたshapeを求める
+  def shiftSE(s:Shape,x: Int,y: Int): Shape ={
+    val (rows,cols) = size(s)
+    (List.range(0,rows+y)) map { i => 
+      (List.range(0,cols+x)) map { j => 
+        if (i >= y && j >= x) s(i-y)(j-x)
+        else Transparent
+      }
+    }
+  }
 
 
   // 8. shiftNW
-  // 目的：
-
-
+    // 目的：受け取ったshapeを左にx,上にyずらしたshapeを求める。
+  def shiftNW(s:Shape,x: Int,y: Int): Shape ={
+    val (rows,cols) = size(s)
+    (List.range(0,rows+y)) map { i => 
+      (List.range(0,cols+x)) map { j => 
+        if (i >= rows || j >= cols) Transparent
+        else s(i)(j)
+      }
+    }
+  }
 
   // 9. padTo
-  // 目的：
-  // 契約：
+    // 目的：受け取ったshapeをrows行cols列に拡大したshapeを求める
+  // 契約：rows,colsは引数のshapeのそれ以上
+  def padTo(s:Shape,rows:Int,cols:Int): Shape ={
+    val (s_rows, s_cols) = size(s)
+    assert(rows >= s_rows && cols >= s_cols)
+    shiftNW(s,cols - s_cols,rows - s_rows)
+  }
 
 
 
   // 10. overlap
-  // 目的：
+    // 目的：受け取った2つのshaoeが重なりを持つかを判断する
+  def overlap(_s1:Shape,_s2:Shape): Boolean ={
+    def overlap_sub(s1:Shape,s2:Shape): Shape ={
+      val (rows1,cols1) = size(s1)
+      val (rows2,cols2) = size(s2)
+      val max_rows = max(rows1,rows2)
+      val max_cols = max(cols1,cols2)
+      val S1 = padTo(s1,max_rows,max_cols)
+      val S2 = padTo(s2,max_rows,max_cols)
+      (List.range(0,max_rows)) map { i =>
+        (List.range(0,max_cols)) map { j =>
+          if (S1(i)(j) != Transparent && S2(i)(j) != Transparent) Red
+          else Transparent
+        }
+      }
+    }
 
+    blockCount(overlap_sub(_s1,_s2)) > 0
+  }
 
 
   // 11. combine
-  // 目的：
-  // 契約：
-
-
+   // 目的：受け取った2つのshapeを結合する
+  // 契約：引数のshapeは重なりを持たない
+  def combine(s1:Shape,s2:Shape): Shape ={
+    assert(overlap(s1,s2) == false)
+    val (rows1,cols1) = size(s1)
+    val (rows2,cols2) = size(s2)
+    val max_rows = max(rows1,rows2)
+    val max_cols = max(cols1,cols2)
+    val S1 = padTo(s1,max_rows,max_cols)
+    val S2 = padTo(s2,max_rows,max_cols)
+    (List.range(0,max_rows)) map { i =>
+      (List.range(0,max_cols)) map { j =>
+        if(S1(i)(j) != Transparent) S1(i)(j)
+        else if(S2(i)(j) != Transparent) S2(i)(j)
+        else Transparent
+      } 
+    }
+  }
 
 }
 
