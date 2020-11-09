@@ -283,32 +283,30 @@ object ShapeLib {
   // 契約：引数の shape は重なりを持たない
   def combine(shape1: Shape, shape2: Shape): Shape ={
     assert(!overlap(shape1, shape2))
-
-    def combineTemp(shape1: Shape, shape2: Shape) = {
+    val cols = max(size(shape1)._2, size(shape2)._2)
+    def combineTemp(shape1: Shape, shape2: Shape): Shape= {
       //目的：2つの row を結合する （ combine で assert があるので契約は要らない）
-      def combineRow(row1: Row, row2: Row): Row ={
-        (row1, row2) match{
-          case (Nil, b) => b
-          case (a, Nil) => a
-          case (Transparent :: xs1, Transparent :: xs2) => Transparent :: combineRow(xs1, xs2)
-          case (x1 :: xs1, Transparent :: xs2) => x1 :: combineRow(xs1, xs2)
-          case (Transparent :: xs1, x2 :: xs2) => x2 :: combineRow(xs1, xs2)
+      def combineRow(row1: Row, row2: Row, col: Int): Row ={
+        (row1, row2, col) match{
+          case (Nil, Nil, 0) => Nil
+          case (Nil, Nil, x) => combineRow(Nil, Nil, x-1) ++ List(Transparent)
+          case (Nil, x2 :: xs2 , x) => x2 :: combineRow(Nil, xs2, x-1)
+          case (x1 :: xs1 , Nil, x) => x1 :: combineRow(xs1, Nil, x-1)
+          case (Transparent :: xs1, Transparent :: xs2, x) => Transparent :: combineRow(xs1, xs2, x-1)
+          case (x1 :: xs1, Transparent :: xs2, x) => x1 :: combineRow(xs1, xs2, x-1)
+          case (Transparent :: xs1, x2 :: xs2, x) => x2 :: combineRow(xs1, xs2, x-1)
           case _ => Nil
         }
       }
-      def emptyRow(cols: Int): Row ={
-        if (cols == 0) Nil
-        else Transparent :: emptyRow(cols - 1)
-      }
       
       (shape1, shape2) match{
-        case (Nil, b) => b
-        case (a, Nil) => a
-        case (x1 :: xs1, x2 :: xs2) => List(combineRow(x1, x2)) ++ combine(xs1, xs2)
+        case (Nil, Nil) => Nil
+        case (Nil, x2 :: xs2) => combineRow(Nil, x2, cols) :: combineTemp(Nil, xs2)
+        case (x1 :: xs1, Nil) => combineRow(x1, Nil, cols) :: combineTemp(xs1, Nil)
+        case (x1 :: xs1, x2 :: xs2) => List(combineRow(x1, x2, cols)) ++ combineTemp(xs1, xs2)
       }
     }
-    val shapeTemp = combineTemp(shape1, shape2)
-    combineTemp(shapeTemp, empty(size(shapeTemp)._1, size(shapeTemp)._2))
+    combineTemp(shape1, shape2)
 
   }
 

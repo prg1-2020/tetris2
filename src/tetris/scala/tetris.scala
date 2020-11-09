@@ -60,20 +60,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
   }
 
   // 1, 4, 7. tick
-  // 目的：落下中のテトロミノを 1 だけ下に 動かす(課題１)
-/*
-  def tick(): World = {
-    var ((x: Int, y: Int), shapet) = piece
-    TetrisWorld(((x,  y + 1), shapet), pile)
-  }
-  // 目的：テトロミノが画面の一番下に達したら、それ以上落下しない(課題４)
-  def tick(): World = {
-    var ((x: Int, y: Int), shapet) = piece
-    if(y >= 10 - S.size(shapet)._1) TetrisWorld(piece, pile)
-    else TetrisWorld(((x,  y + 1), shapet), pile)
-  }
-*/
-  //テトロミノが下に移動できなくなったときに、適切な処理が行われる(課題７)
+  //目的：落下中のテトロミノを 1 だけ下に 動かす。テトロミノが下に移動できなくなったときに、適切な処理が行われる(課題７)
   def tick(): World ={
     val ((x: Int, y: Int), shapet) = piece
     val future = TetrisWorld(((x,  y + 1), shapet), pile)
@@ -83,27 +70,13 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
       // if(collision(future)) endOfWorld("End")
       futureoffuture
     }
-    else if(y >= 10 - S.size(shapet)._1) TetrisWorld(piece, pile)
+    else if(y >= A.WellHeight - S.size(shapet)._1) TetrisWorld(piece, pile)
     else future
 
   }
 
   // 2, 5. keyEvent
-/*
-  // 目的：キー入力に従って世界を更新する(課題２)
-  def keyEvent(key: String): World = {
-    var ((x: Int, y: Int), shapet) = piece
-    if(collision(TetrisWorld(piece, pile)) TetrisWorld(piece, pile)
-    else key match{
-      case "UP" => TetrisWorld(((x, y), S.rotate(shapet)), pile)
-      case "LEFT" => TetrisWorld(((x - 1, y), shapet), pile)
-      case "RIGHT" => TetrisWorld(((x + 1, y), shapet), pile)
-      case _ => TetrisWorld(piece, pile)
-    }
-    
-  }
-*/
-  // 目的：キー操作によって衝突が起きるなら、その操作を無視する(課題５)
+  // 目的：キー入力に従って世界を更新。キー操作によって衝突が起きるなら、その操作を無視する(課題５)
   def keyEvent(key: String): World = {
     val ((x: Int, y: Int), shapet) = piece
     val future = key match{
@@ -125,7 +98,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
   // 目的：受け取った世界で衝突が起きているかを判定する関数(課題３)
   def collision(world: TetrisWorld): Boolean = {
     val ((x: Int, y: Int), shapet) = world.piece
-    if(x <  0 || x > 10 - S.size(shapet)._2 ||  y > 10 - S.size(shapet)._1 || S.overlap(S.shiftSE(shapet, x, y), pile)) true
+    if(x <  0 || x > A.WellWidth - S.size(shapet)._2 ||  y > A.WellHeight - S.size(shapet)._1 || S.overlap(S.shiftSE(shapet, x, y), pile)) true
     else false
   }
 
@@ -151,10 +124,14 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
   //目的：ミノを瞬時に一番下に置く
   def hardDrop(world: TetrisWorld): TetrisWorld ={
     val ((x, y), shapet) = world.piece
-    val next = TetrisWorld(((x, y+1), shapet), world.pile)
+    val next2 = TetrisWorld(((x, y+2), shapet), world.pile)
     if (collision(world)) world
-    else if (collision(next)) TetrisWorld(A.newPiece(), eraseRows(S.combine(S.shiftSE(shapet, x, y), world.pile)))
-    else hardDrop(next)
+    else if (collision(next2)){
+      val next = TetrisWorld(((x, y+1), shapet), world.pile)
+      if (collision(next)) TetrisWorld(A.newPiece(), eraseRows(S.combine(S.shiftSE(shapet, x, y), world.pile)))
+      else TetrisWorld(A.newPiece(), eraseRows(S.combine(S.shiftSE(shapet, x, y+1), world.pile)))
+    }
+    else hardDrop(next2)
   }
 
   //8-2. softDrop
@@ -172,7 +149,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
 object A extends App {
   // ゲームウィンドウとブロックのサイズ
   val WellWidth = 10
-  val WellHeight = 10
+  val WellHeight = 20
   val BlockSize = 30
 
   // 新しいテトロミノの作成
