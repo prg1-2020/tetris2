@@ -109,13 +109,13 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, score: Int, 
     }
     */
     //課題５をもとに追加機能を実装
-    //下キーを押すと下がれるところまで下がれる機能のための関数
+    //下キーを押すと下がれるところまで下がれる機能のための関数goDown
     //下がった後も動かせると操作性が広がるので、pileへの結合はしない方針で実装
-    def goToDown(world: TetrisWorld): TetrisWorld ={
+    def goDown(world: TetrisWorld): TetrisWorld ={
       val ((xD, yD), shapeD) = world.piece
       val (aD, bD) = S.size(shapeD)
       if (!collision(TetrisWorld(((xD, yD+1), shapeD), world.pile, world.score, "Y"))) 
-        goToDown(TetrisWorld(((xD, yD+1), shapeD), world.pile, world.score, "Y"))
+        goDown(TetrisWorld(((xD, yD+1), shapeD), world.pile, world.score, "Y"))
       else TetrisWorld(world.piece, world.pile, world.score, "Y")
     }
     if (started == "N") {
@@ -131,7 +131,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, score: Int, 
                       else TetrisWorld(((x-1, y), shape), pile, score, "Y")
       case "UP"    =>if (collision(TetrisWorld(((x, y), S.rotate(shape)), pile, score, "Y"))) TetrisWorld(piece, pile, score, "Y")
                      else TetrisWorld(((x, y), S.rotate(shape)), pile, score, "Y")
-      case "DOWN"  => goToDown(TetrisWorld(piece, pile, score, "Y"))
+      case "DOWN"  => goDown(TetrisWorld(piece, pile, score, "Y"))
     }
   }
 
@@ -160,12 +160,12 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape, score: Int, 
       }
     }
     val newpile = reverseRow(findFilled(reverseRow(pile)))
-    val banishrow = (S.blockCount(pile)-S.blockCount(newpile))/A.WellWidth
-    val addscore = if (banishrow==0) 0
-                   else if (banishrow==1) 40
-                   else if (banishrow==2) 100
-                   else if (banishrow==3) 300
-                   else if (banishrow==4) 1200
+    val vanishrow = (S.blockCount(pile)-S.blockCount(newpile))/A.WellWidth
+    val addscore = if (vanishrow==0) 0
+                   else if (vanishrow==1) 40
+                   else if (vanishrow==2) 100
+                   else if (vanishrow==3) 300
+                   else if (vanishrow==4) 1200
                    else 0
     (newpile, addscore)
   }
