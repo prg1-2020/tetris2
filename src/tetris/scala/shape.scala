@@ -85,62 +85,197 @@ object ShapeLib {
   def random(): Shape = allShapes(r.nextInt(allShapes.length))
 
   // 1. duplicate
-  // 目的：
+  // 目的：整数nと任意の型の値aを受け取りn個のaで構成されたリストを返す
+  def duplicate[A](n:Int,a:A):List[A]={
+    if(n<=0) Nil
+    else a::duplicate[A](n-1,a)
+  }
+
 
 
 
   // 2. empty
-  // 目的：
+  // 目的：rows行cols列の空のshapeを返す
+  def empty(rows:Int,cols:Int):Shape={
+    duplicate[Row](rows,duplicate[Block](cols,Transparent))
+  }
 
 
 
   // 3. size
-  // 目的：
-
+  // 目的：shapeを受け取りそのサイズを返す
+  def sizeAcc(list:Shape,rows:Int,cols:Int):(Int,Int)={
+    list match {
+      case Nil =>(rows,cols)
+      case x::xs=>sizeAcc(xs,rows+1,max(cols,x.length))
+}
+}
+  def size(list:Shape):(Int,Int)={
+    sizeAcc(list,0,0)
+    
+  }
 
 
   // 4. blockCount
-  // 目的：
-
+  // 目的：受け取ったshapeに含まれている空でないブロックの数を返す
+  def blockCountRow(list:Row):Int={
+    val list1 = list.filter(p => p!=Transparent )
+    list1.length
+  }
+  def blockCount(list:Shape):Int={
+    val list2 = list.map[Int](p=> blockCountRow(p))
+    list2.foldLeft(0)((r,x)=>r+x)
+  }
 
 
   // 5. wellStructured
-  // 目的：
+  // 目的：受け取ったshapeがまっとうであるか判断する
+  def wellstructuredAcc(list:Shape)(n:Int):Boolean={
+    list match{
+      case Nil => true
+      case x::xs=>if(n== x.length)wellstructuredAcc(xs)(n)else false
+    }
 
+  }
+  def wellStructured(list:Shape):Boolean={
+    list match{
+      case Nil => false
+      case x::xs=> if (blockCount(list)>0) wellstructuredAcc(xs)(x.length)else false
 
+    }
 
+  }
+  
   // 6. rotate
-  // 目的：
-  // 契約：
+  // 目的：Shapeを受け取り、それを反時計回りに90度回転させたshapeを返す
+  // 契約：受け取るshapeはまっとうである
+  //  def rotateAcc(list:Shape,newlist:Shape):Shape={//listの先頭要素のみを取り出し、それらをリストにしてnewlistに加える
+  //}
+  def extract_top(list:Shape,list_top:Row):Row={//listの要素であるRow型のリストの先頭要素のみを取り出しそれらをつなげ、新たなRow型のリストを作る
+    list match{
+      case Nil=>list_top.reverse
+      case x::xs=> x match{
+        case Nil=>list_top.reverse
+        case y::ys=>extract_top(xs,y::list_top)     
+      }
+    }
+  }
+  def extract_following(list:Shape,list_following:Shape):Shape={//listの要素であるRow型のリストの先頭以外の要素を取り出しそれらをつなげ、新たなリストを作る
 
-
+    list match{
+      case Nil=>list_following.reverse
+      case x::xs=> x match{
+        case Nil=>list_following.reverse
+        case y::ys=>extract_following(xs,ys::list_following)     
+      }
+    }
+  }
+  def rotateAcc(list:Shape,list_new:Shape):Shape={
+    list match{
+      case Nil =>list_new
+      case x::xs=>if(x==List()) list_new else rotateAcc(extract_following(list,Nil),extract_top(list,Nil)::list_new)
+    }
+  }
+  
+  def rotate(list:Shape):Shape={
+    assert(wellStructured(list)==true)
+    rotateAcc(list,Nil)
+  }
 
   // 7. shiftSE
-  // 目的：
-
-
-
+  // 目的：受け取ったshapeを右にx下にyだけ動かしたshapeを返す
+  
+  //受け取ったrowの最初にn個のtransparentを追加する
+  def addTransparent(list:Row,n:Int):Row={
+    list++ duplicate(n,Transparent)
+    }
+  //受け取ったrowの最後にn個のtransparentを追加する
+    def addTransparentRev(list:Row,n:Int):Row={
+    duplicate(n,Transparent)++list
+    }
+  def shiftSE(list:Shape,x:Int,y:Int)={
+    val (h,w)=size(list)
+    empty(y,x+w)++list.map(row=>addTransparentRev(row,x))
+  }
+  
   // 8. shiftNW
-  // 目的：
-
+  // 目的：受け取ったshapeを左にx上にyだけ動かしたshapeを返す
+  def shiftNW(list:Shape,x:Int,y:Int):Shape={
+    val (h,w)=size(list)
+    list.map(row=>addTransparent(row,x))++empty(y,x+w)
+  }
 
 
   // 9. padTo
-  // 目的：
-  // 契約：
+  // 目的：受け取ったshapeをrows行cols列に拡大したshapeを返す
+  // 契約：rows, colsはshapeの行数,列数以上
+  def padTo(list:Shape,m:Int,n:Int):Shape={
+    val (h,w)=size(list)
+    assert(h<=m && w<=n)
+    shiftNW(list,n-w,m-h)
+
+  }
 
 
 
   // 10. overlap
-  // 目的：
+  // 目的：二つのshapeが重なりを持つか判定する
+  def sizeMax(list1:Shape,list2:Shape):(Int,Int)={
+    val (x1,y1)=size(list1)
+    val (x2,y2)=size(list2)
+    (max(x1,x2),max(y1,y2))
+  }
+  //契約　list1,list2のサイズは等しい(この関数を呼び出す際にはpadToを使って同じサイズにして代入する)
+  def overlapRow(list1:Row,list2:Row):Boolean={//padToでサイズを同じにして代入する
+    (list1,list2) match{
+      case(Nil,Nil)=>false
+      case(x::xs,y::ys)=>if(x!=Transparent && y!=Transparent) true else(overlapRow(xs,ys))
+  }
+  }
+  //契約　list1,list2のサイズは等しい(この関数を呼び出す際にはpadToを使って同じサイズにして代入する)
+  def overlapSameSize(list1:Shape,list2:Shape):Boolean={
+    (list1,list2) match{
+      case (Nil,Nil) => false
+      case (x::xs,y::ys)=> if(overlapRow(x,y)==true)true else overlapSameSize(xs,ys)
+    }
+  }
 
+  def overlap(list1:Shape,list2:Shape):Boolean={
+    val (x,y)=sizeMax(list1,list2)
+    val listA=padTo(list1,x,y)
+    val listB=padTo(list2,x,y)
+    overlapSameSize(listA,listB)
 
+  }
+// 11. combine
+  // 目的：2つのShapeを結合する
+  // 契約：二つのshapeは重なりを持たない
 
-  // 11. combine
-  // 目的：
-  // 契約：
+  //契約　list1,list2のサイズは等しい(この関数を呼び出す際にはpadToを使って同じサイズにして代入する)
+  
+  def combineRow(list1:Row,list2:Row,newlist:Row):Row={
+    (list1,list2) match{
+      case (Nil,Nil)=>newlist.reverse
+      case(x::xs,y::ys)=>if(x!=Transparent)combineRow(xs,ys,x::newlist) 
+      else if(y!=Transparent) combineRow(xs,ys,y::newlist) 
+      else combineRow(xs,ys,Transparent::newlist)
+    }
+  }
+  //契約　list1,list2のサイズは等しい(この関数を呼び出す際にはpadToを使って同じサイズにして代入する)
+  def combineAcc(list1:Shape,list2:Shape,newlist:Shape):Shape={
+    (list1,list2) match{
+      case (Nil,Nil)=>newlist.reverse
+      case(x::xs,y::ys)=>combineAcc(xs,ys,combineRow(x,y,Nil)::newlist)
+    }
+  }
+  def combine(list1:Shape,list2:Shape):Shape={
+    val (x,y)=sizeMax(list1,list2)
+    val listA=padTo(list1,x,y)
+    val listB=padTo(list2,x,y)
+    assert(overlap(listA,listB)==false)
+    combineAcc(listA,listB,Nil)
 
-
+  }
 
 }
 

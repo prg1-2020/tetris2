@@ -62,26 +62,111 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
   // 1, 4, 7. tick
   // 目的：
   def tick(): World = {
-    TetrisWorld(piece, pile)
+    val ((x,y),shape)=piece
+    val (h,w) = S.size(shape)
+    //pileとoverlapした時も考える
+    if(collision(TetrisWorld(((x,y+1),shape), pile))==false) TetrisWorld(((x,y+1),shape), pile)
+    
+//ここでミノは止まるから　elseの中に操作をかく（ミノが最下点に到達した時１秒猶予を与えるってのもあり？？）    
+    else {
+      //pileにつなげる(pieceの左上をpileに合わせる)
+      
+      val shape_extend = S.shiftSE(shape,x,y)
+      val pileCombine = S.combine(pile,shape_extend)
+      val pileNew = eraseRows(pileCombine)
+      
+      if(collision(TetrisWorld(((4,0),S.random), pileNew))) TetrisWorld(((4,0),shape), pile)
+      else TetrisWorld(((4,0),S.random), pileNew)
+    }
   }
 
   // 2, 5. keyEvent
   // 目的：
-  def keyEvent(key: String): World = {
-    TetrisWorld(piece, pile)
+  /*
+  def drop(world:TetrisWorld):TetrisWorld={
+    var TetrisWorld(((x,y),shape),pile) = world
+    while(collision(((((x,y),shape),pile)))==false){
+      y += 1
+    }
+    TetrisWorld(((x,y-1),shape),pile)
   }
+  def dropPiece ( (((x,y),shape),pile) :(((Int,Int),Shape),Shape)):(((Int,Int),Shape),Shape)={
+    while(collision(((((x,y),shape),pile)))==false){
+      y += 1
+    }
+   (((x,y-1),shape),pile)
+    }
+*/
+  def dropPiece (world:TetrisWorld):(Int,Int)={
+    val TetrisWorld(((x,y),shape),pile) = world
+    var yVar = y
+    while(collision(TetrisWorld(((x,yVar),shape),pile))==false){
+      yVar += 1
+    }
+   (x,yVar-1)
+    }
 
+  def newWorld(key:String):TetrisWorld={
+  val ((x,y),shape)=piece
+  key match{
+    case "RIGHT"=>TetrisWorld(((x+1,y),shape), pile)
+    case "LEFT"=>TetrisWorld(((x-1,y),shape), pile)
+    case "r" =>TetrisWorld(((x,y),S.rotate(shape)),pile) 
+    //拡張　ミノを下に動かせる
+    case "DOWN" => TetrisWorld(((x,y+1),shape),pile) 
+    //拡張　ハードドロップ
+    case "UP" => TetrisWorld((dropPiece(TetrisWorld(((x,y),shape), pile)),shape),pile)
+    }
+
+}
+def keyEvent(key: String): World = {
+
+    val ((x,y),shape)=piece
+    val new_World = newWorld(key)
+    if(collision(new_World) == true) TetrisWorld(((x,y),shape), pile)
+    else new_World 
+   }
+  /*
+  def newWorld(key:String,drop:Int):TetrisWorld={
+  val ((x,y),shape)=piece
+  key match{
+    case "RIGHT"=>TetrisWorld(((x+1,y),shape), pile)
+    case "LEFT"=>TetrisWorld(((x-1,y),shape), pile)
+    case "r" =>TetrisWorld(((x,y),S.rotate(shape)),pile)
+    //拡張　ミノを下に動かせる 
+    case "DOWN" => TetrisWorld(((x,y+1),shape),pile) 
+    //拡張　ミノを一番下まで移動させる
+    //case "UP" => TetrisWorld(((x,9),shape),pile)
+                 
+
+  }
+}
+def keyEvent(key: String): World = { 
+    val ((x,y),shape)=piece
+    val new_World = newWorld(key)
+    if(collision(new_World) == true) TetrisWorld(((x,y),shape), pile)
+    else new_World 
+   }
+*/
   // 3. collision
   // 目的：
   def collision(world: TetrisWorld): Boolean = {
-    false
+    val ((x,y),shape)= world.piece
+    val (h,w) = S.size(shape)
+    val (h_pile,w_pile) = S.size(world.pile)
+    val shape_extend = S.shiftSE(shape,x,y) //左上を揃える
+    (x< 0)||(x+w > h_pile)||(y+h> w_pile) ||S.overlap(shape_extend,pile)
   }
+  
 
   // 6. eraseRows
   // 目的：
   def eraseRows(pile: S.Shape): S.Shape = {
-    pile
-  }
+    val (h_pile,w_pile) = S.size(pile)
+    val list = pile.filter(x => S.blockCountRow(x) < w_pile)
+    S.empty(h_pile - list.length,w_pile)++list
+    }
+
 }
 
 // ゲームの実行
