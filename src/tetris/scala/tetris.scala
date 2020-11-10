@@ -98,13 +98,18 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
     }
     */
 
-    val ((x,y),s) = piece
+    var ((x,y),s) = piece
     val world = {
       key match {
       case "RIGHT" => TetrisWorld(((x+1,y),s), pile)
       case "LEFT"  => TetrisWorld(((x-1,y),s), pile)
       case "DOWN"  => TetrisWorld(((x,y+1),s), pile)
       case "UP"    => TetrisWorld(((x,y),S.rotate(s)), pile)
+      case "SPACE" => {
+        var m = A.change
+        A.change = piece
+        TetrisWorld(m, pile)
+        }
       }
     }
     if(collision(world)) TetrisWorld(piece,pile)
@@ -142,8 +147,8 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
 // ゲームの実行
 object A extends App {
   // ゲームウィンドウとブロックのサイズ
-  val WellWidth = 10
-  val WellHeight = 10
+  val WellWidth = 13
+  val WellHeight = 13
   val BlockSize = 30
 
   // 新しいテトロミノの作成
@@ -157,6 +162,7 @@ object A extends App {
 
   // 最初のテトロミノ
   val piece = newPiece()
+  var change = newPiece()
 
   // ゲームの初期値
   val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)))
