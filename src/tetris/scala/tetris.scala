@@ -75,19 +75,21 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
   }
   */
   def tick(): World = {
-    val ((x,y),s) = piece
-    if(s == List(List(Transparent))) return this
-    if(collision(TetrisWorld(((x,y+1),s),pile))) {
-      val bigpiece = S.shiftSE(s,x,y)
-      val nextPile = eraseRows(S.combine(pile, bigpiece))
-      val nextWorld = TetrisWorld(A.newPiece(), nextPile)
-      if(collision(nextWorld)){
-        println("Game Over")
-        return TetrisWorld(((0, 0), List(List(Transparent))), nextPile)
+    val ((x, y), s) = piece
+    val (h, w) = S.size(s)
+    val nextworld = TetrisWorld(((x, y+1), s), pile)
+
+    if(y+h == A.WellHeight || collision(nextworld)){
+      val newworld = TetrisWorld(A.newPiece(), eraseRows(S.combine(S.shiftSE(s,x,y), pile)))
+      if(collision(newworld)){
+        //endOfWorld("Game Over")
+        println("GameOver")
       }
-      else return nextWorld
+      newworld
+      
+    }else{
+      nextworld
     }
-    TetrisWorld(((x,y+1),s),pile)
   }
   // 2, 5. keyEvent
   // 目的：
@@ -115,9 +117,11 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
   // 3. collision
   // 目的：
   def collision(world: TetrisWorld): Boolean = {
-    val ((x,y),s) = piece
-    val (m,n) = S.size(s)
-    x<0 || A.WellWidth<x+n || A.WellHeight<=y+m || S.overlap(S.shiftSE(s,x,y),pile)
+    val ((x, y), s) = world.piece
+    val (h, w) = S.size(s)
+    val absS = S.shiftSE(s,x,y)
+
+    x < 0 || A.WellWidth < x+w || A.WellHeight < y+h || S.overlap(absS, world.pile)
   }
 
   // 6. eraseRows
