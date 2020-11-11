@@ -61,26 +61,77 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
 
   // 1, 4, 7. tick
   // 目的：
+  /*1のtick
   def tick(): World = {
-    TetrisWorld(piece, pile)
+    val ((x,y),s) = piece
+    TetrisWorld(((x,y+1),s),pile)
   }
+  */
+  /*4のtick
+  def tick(): World = {
+    val ((x,y),s) = piece
+    val wd = TetrisWorld(((x,y+1),s),pile)
+    if (collision(wd)) TetrisWorld(piece,pile) else wd
+  }
+  */
+  def tick(): World = {
+    val ((x, y), s) = piece
+    val (h, w) = S.size(s)
+    val nextworld = TetrisWorld(((x, y+1), s), pile)
 
+    if(y+h == A.WellHeight || collision(nextworld)){
+      val newworld = TetrisWorld(A.newPiece(), eraseRows(S.combine(S.shiftSE(s,x,y), pile)))
+      if(collision(newworld)){
+        //endOfWorld("Game Over")
+        println("GameOver")
+      }
+      newworld
+      
+    }else{
+      nextworld
+    }
+  }
   // 2, 5. keyEvent
   // 目的：
+  /*
   def keyEvent(key: String): World = {
-    TetrisWorld(piece, pile)
+    val ((x,y),s) = piece
+    key match{
+      case "RIGHT" => TetrisWorld(((x+1,y),s),pile)
+      case "LEFT" => TetrisWorld(((x-1,y),s),pile)
+      case "UP" => TetrisWorld(((x,y),S.rotate(s)),pile)
+    }
   }
-
+  */
+  def keyEvent(key: String):World = {
+    val ((x,y),s) = piece
+    val nextpiece = key match{
+      case "RIGHT" => ((x+1,y),s)
+      case "LEFT" => ((x-1,y),s)
+      case "UP" => ((x,y),S.rotate(s))
+      case "DOWN" => ((x,y+1),s)
+    }
+    if (collision(TetrisWorld(nextpiece,pile))) TetrisWorld(piece,pile) else TetrisWorld(nextpiece,pile)
+  }
+  
   // 3. collision
   // 目的：
   def collision(world: TetrisWorld): Boolean = {
-    false
+    val ((x, y), s) = world.piece
+    val (h, w) = S.size(s)
+    val absS = S.shiftSE(s,x,y)
+
+    x < 0 || A.WellWidth < x+w || A.WellHeight < y+h || S.overlap(absS, world.pile)
   }
 
   // 6. eraseRows
   // 目的：
   def eraseRows(pile: S.Shape): S.Shape = {
-    pile
+    def denseRow(row: S.Row): Boolean = {
+      row.foldLeft(true)((p, block) => p && (block != Transparent))
+    }
+    val condensedPile = pile.foldRight(List[List[S.Block]]())((row, nextPile) => if(denseRow(row)) nextPile else row::nextPile)
+    List.fill(A.WellHeight - condensedPile.length)(List.fill(A.WellWidth)(Transparent)) ++ condensedPile
   }
 }
 
