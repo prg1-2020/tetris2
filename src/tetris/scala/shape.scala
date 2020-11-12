@@ -83,6 +83,14 @@ object ShapeLib {
   val r = new Random()
 
   def random(): Shape = allShapes(r.nextInt(allShapes.length))
+  //7mino一巡
+  def random7mino(list:List[Shape]): (Shape,List[Shape]) = {
+    list match {
+      case Nil => {val list1 = scala.util.Random.shuffle(allShapes)
+                   random7mino(list1)}
+      case x::xs => (x,xs)
+    }
+  }
 
   // 1. duplicate
   // 目的：整数nと任意の型の値aを受け取りn個のaで構成されたリストを返す

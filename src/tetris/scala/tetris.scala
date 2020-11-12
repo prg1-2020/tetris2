@@ -58,12 +58,14 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape)( hold:S.Shap
 //ここをいじれば描画できる
   def draw(): Boolean = {
     val (pos, shape) = piece
+    val (x,y) = pos 
     canvas.drawRect(Pos(0, 0), canvas.width, canvas.height, CanvasColor) &&
     drawShape00(pile) &&
     drawShape(pos, shape) &&
     drawShape((A.WellWidth+ A.WellWidthOfSub /2 ,2),hold)&& //holdの描画
     drawShape((A.WellWidth,0),partationA)&&
-    drawShape((A.WellWidth,7),partationB)
+    drawShape((A.WellWidth,7),partationB)&&
+    drawShape( dropPiece(TetrisWorld(piece,pile)(hold)),changeColorShape(shape,HSB(0,0,0.5f)))
   }
   //新しいミノが現れる座標
   val pos = (A.WellWidth / 2 - 1, 0)
@@ -93,21 +95,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape)( hold:S.Shap
 
   // 2, 5. keyEvent
   // 目的：
-  /*
-  def drop(world:TetrisWorld):TetrisWorld={
-    var TetrisWorld(((x,y),shape),pile) = world
-    while(collision(((((x,y),shape),pile)))==false){
-      y += 1
-    }
-    TetrisWorld(((x,y-1),shape),pile)
-  }
-  def dropPiece ( (((x,y),shape),pile) :(((Int,Int),Shape),Shape)):(((Int,Int),Shape),Shape)={
-    while(collision(((((x,y),shape),pile)))==false){
-      y += 1
-    }
-   (((x,y-1),shape),pile)
-    }
-*/
+  
   def dropPiece (world:TetrisWorld):(Int,Int)={
     val TetrisWorld(((x,y),shape),pile) = world
     var yVar = y
@@ -139,28 +127,7 @@ def keyEvent(key: String): World = {
     if(collision(new_World) == true) TetrisWorld(((x,y),shape), pile)(hold)
     else new_World 
    }
-  /*
-  def newWorld(key:String,drop:Int):TetrisWorld={
-  val ((x,y),shape)=piece
-  key match{
-    case "RIGHT"=>TetrisWorld(((x+1,y),shape), pile)
-    case "LEFT"=>TetrisWorld(((x-1,y),shape), pile)
-    case "r" =>TetrisWorld(((x,y),S.rotate(shape)),pile)
-    //拡張　ミノを下に動かせる 
-    case "DOWN" => TetrisWorld(((x,y+1),shape),pile) 
-    //拡張　ミノを一番下まで移動させる
-    //case "UP" => TetrisWorld(((x,9),shape),pile)
-                 
-
-  }
-}
-def keyEvent(key: String): World = { 
-    val ((x,y),shape)=piece
-    val new_World = newWorld(key)
-    if(collision(new_World) == true) TetrisWorld(((x,y),shape), pile)
-    else new_World 
-   }
-*/
+  
   // 3. collision
   // 目的：
   def collision(world: TetrisWorld): Boolean = {
@@ -180,7 +147,16 @@ def keyEvent(key: String): World = {
     S.empty(h_pile - list.length,w_pile)++list
     }
 
+  def changeColorRow(row:S.Row,color:Color):S.Row={
+    row.map( x => if(x==Transparent)Transparent else color)
+  }
+  def changeColorShape(shape:S.Shape,color:Color):S.Shape={
+    shape.map(x => changeColorRow(x,color))
+  }
+
 }
+  // changeColor
+  
 
 // ゲームの実行
 object A extends App {
@@ -191,7 +167,7 @@ object A extends App {
   val WellWidthOfSub = 10
 
   // 新しいテトロミノの作成
-  val r = new Random()
+  val r = new Random()//オブジェクト、インスタンス
 
   def newPiece(): ((Int, Int), S.Shape) = {
     val pos = (WellWidth / 2 - 1, 0)
