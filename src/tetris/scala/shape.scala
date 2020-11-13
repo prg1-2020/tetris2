@@ -85,11 +85,18 @@ object ShapeLib {
   def random(): Shape = allShapes(r.nextInt(allShapes.length))
   //7mino一巡
   def random7mino(list:List[Shape]): (Shape,List[Shape]) = {
-    list match {
-      case Nil => {val list1 = scala.util.Random.shuffle(allShapes)
-                   random7mino(list1)}
+    if(list.length ==7) return random7mino(list ++ scala.util.Random.shuffle(allShapes))
+    list match{
+      case Nil => random7mino(list ++ scala.util.Random.shuffle(allShapes))
       case x::xs => (x,xs)
     }
+
+    /*
+    list match {
+      case Nil => {val list1 = c
+                   random7mino(list1)}
+      case x::xs => (x,xs)
+    }*/
   }
 
   // 1. duplicate

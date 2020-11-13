@@ -20,7 +20,7 @@ import tetris.{ShapeLib => S}
 import java.beans.Transient
 
 // テトリスを動かすための関数
-case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape)( hold:S.Shape) extends World() {
+case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape)(hold:S.Shape)(nextMino:List[S.Shape]) extends World() {
 
   // マウスクリックは無視
   def click(p: sgeometry.Pos): World = this
@@ -63,9 +63,12 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape)( hold:S.Shap
     drawShape00(pile) &&
     drawShape(pos, shape) &&
     drawShape((A.WellWidth+ A.WellWidthOfSub /2 ,2),hold)&& //holdの描画
+    drawShape((A.WellWidth+ A.WellWidthOfSub /2 ,9), nextMino.apply(0))&&
+    drawShape((A.WellWidth+ A.WellWidthOfSub /2 ,14), nextMino.apply(1))&&
     drawShape((A.WellWidth,0),partationA)&&
     drawShape((A.WellWidth,7),partationB)&&
-    drawShape( dropPiece(TetrisWorld(piece,pile)(hold)),changeColorShape(shape,HSB(0,0,0.5f)))
+    drawShape( dropPiece(TetrisWorld(piece,pile)(hold)(nextMino)),changeColorShape(shape,HSB(0,0,0.5f)))
+
   }
   //新しいミノが現れる座標
   val pos = (A.WellWidth / 2 - 1, 0)
@@ -78,7 +81,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape)( hold:S.Shap
     val ((x,y),shape)=piece
     val (h,w) = S.size(shape)
     //pileとoverlapした時も考える
-    if(collision(TetrisWorld(((x,y+1),shape), pile)(hold))==false) TetrisWorld(((x,y+1),shape), pile)(hold)
+    if(collision(TetrisWorld(((x,y+1),shape), pile)(hold)(nextMino))==false) TetrisWorld(((x,y+1),shape), pile)(hold)(nextMino)
     
 //ここでミノは止まるから　elseの中に操作をかく（ミノが最下点に到達した時１秒猶予を与えるってのもあり？？）    
     else {
@@ -87,9 +90,10 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape)( hold:S.Shap
       val shape_extend = S.shiftSE(shape,x,y)
       val pileCombine = S.combine(pile,shape_extend)
       val pileNew = eraseRows(pileCombine)
-      
-      if(collision(TetrisWorld((pos,S.random), pileNew)(hold))) TetrisWorld((pos,shape), pile)(hold)
-      else TetrisWorld((pos,S.random), pileNew)(hold)
+      //終わりの条件
+      if(collision(TetrisWorld((pos,S.random7mino(nextMino)._1), pileNew)(hold)(S.random7mino(nextMino)._2))) {
+        TetrisWorld((pos,shape), pile)(hold)(nextMino)}
+      else TetrisWorld((pos,S.random7mino(nextMino)._1), pileNew)(hold)(S.random7mino(nextMino)._2)
     }
   }
 
@@ -99,7 +103,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape)( hold:S.Shap
   def dropPiece (world:TetrisWorld):(Int,Int)={
     val TetrisWorld(((x,y),shape),pile) = world
     var yVar = y
-    while(collision(TetrisWorld(((x,yVar),shape),pile)(hold))==false){
+    while(collision(TetrisWorld(((x,yVar),shape),pile)(hold)(nextMino))==false){
       yVar += 1
     }
    (x,yVar-1)
@@ -108,15 +112,15 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape)( hold:S.Shap
   def newWorld(key:String):TetrisWorld={
   val ((x,y),shape)=piece
   key match{
-    case "RIGHT"=>TetrisWorld(((x+1,y),shape), pile)(hold)
-    case "LEFT"=>TetrisWorld(((x-1,y),shape), pile)(hold)
-    case "r" =>TetrisWorld(((x,y),S.rotate(shape)),pile)(hold)
+    case "RIGHT"=>TetrisWorld(((x+1,y),shape), pile)(hold)(nextMino)
+    case "LEFT"=>TetrisWorld(((x-1,y),shape), pile)(hold)(nextMino)
+    case "r" =>TetrisWorld(((x,y),S.rotate(shape)),pile)(hold)(nextMino)
     //拡張　ミノを下に動かせる
-    case "DOWN" => TetrisWorld(((x,y+1),shape),pile)(hold)
+    case "DOWN" => TetrisWorld(((x,y+1),shape),pile)(hold)(nextMino)
     //拡張　ハードドロップ
-    case "UP" => TetrisWorld((dropPiece(TetrisWorld(((x,y),shape), pile)(hold)),shape),pile)(hold)
-    case "e" => if(hold == S.empty(1,1)) TetrisWorld((pos,S.random),pile)(shape)
-                else TetrisWorld((pos,hold),pile)(shape)
+    case "UP" => TetrisWorld((dropPiece(TetrisWorld(((x,y),shape), pile)(hold)(nextMino)),shape),pile)(hold)(nextMino)
+    case "e" => if(hold == S.empty(1,1)) TetrisWorld((pos,S.random7mino(nextMino)._1),pile)(shape)(S.random7mino(nextMino)._2)
+                else TetrisWorld((pos,hold),pile)(shape)(nextMino)
       }
 
 }
@@ -124,7 +128,7 @@ def keyEvent(key: String): World = {
 
     val ((x,y),shape)=piece
     val new_World = newWorld(key)
-    if(collision(new_World) == true) TetrisWorld(((x,y),shape), pile)(hold)
+    if(collision(new_World) == true) TetrisWorld(((x,y),shape), pile)(hold)(nextMino)
     else new_World 
    }
   
@@ -162,7 +166,7 @@ def keyEvent(key: String): World = {
 object A extends App {
   // ゲームウィンドウとブロックのサイズ
   val WellWidth = 10
-  val WellHeight = 10+10
+  val WellHeight = 10 +5 +5
   val BlockSize = 30
   val WellWidthOfSub = 10
 
@@ -174,12 +178,12 @@ object A extends App {
     (pos,
      List.fill(r.nextInt(4))(0).foldLeft(S.random())((shape, _) => shape))
   }
-
+  
   // 最初のテトロミノ
   val piece = newPiece()
 
   // ゲームの初期値
-  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)))(S.empty(1,1))
+  val world = TetrisWorld(piece, List.fill(WellHeight)(List.fill(WellWidth)(Transparent)))(S.empty(1,1))( scala.util.Random.shuffle(S.allShapes))
 
   // ゲームの開始
   world.bigBang(BlockSize * (WellWidth+WellWidthOfSub), BlockSize * (WellHeight), 1)
