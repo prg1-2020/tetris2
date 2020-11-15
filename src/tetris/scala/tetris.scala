@@ -68,6 +68,7 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape)(hold:S.Shape
     drawShape((A.WellWidth,0),partationA)&&
     drawShape((A.WellWidth,7),partationB)&&
     drawShape( dropPiece(TetrisWorld(piece,pile)(hold)(nextMino)(score)),changeColorShape(shape,HSB(0,0,0.5f)))
+    //canvas.drawString(Pos(A.WellWidth,0),score.toString())
 
   }
   //新しいミノが現れる座標
@@ -92,10 +93,14 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape)(hold:S.Shape
       val pileCombine = S.combine(pile,shape_extend)
       val pileNew = eraseRows(pileCombine)._1
       val addScore= eraseRows(pileCombine)._2
-      println(addScore + "\n")
+      println( "\n"+ score )
       //終わりの条件
       if(collision(TetrisWorld((pos,S.random7mino(nextMino)._1), pileNew)(hold)(S.random7mino(nextMino)._2)(score))) {
-        TetrisWorld((pos,shape), pile)(hold)(nextMino)(score + addScore)}
+        println( "\n"+ score + "\n")
+        endOfWorld("Game Over")
+        
+        TetrisWorld((pos,shape), pile)(hold)(nextMino)(score + addScore)
+        }
       else TetrisWorld((pos,S.random7mino(nextMino)._1), pileNew)(hold)(S.random7mino(nextMino)._2)(score + addScore)
     }
   }
