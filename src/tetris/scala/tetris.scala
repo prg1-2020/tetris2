@@ -160,7 +160,6 @@ case class TetrisWorld(piece: ((Int, Int), S.Shape), pile: S.Shape) extends Worl
       else if (x == 2) println("ダブル")
       else if (x == 3) println("トリプル")
       else println("テトリス")
-      println(score)
       List.fill(x)(List.fill(10)(Transparent)) ++ p
     }
   }
